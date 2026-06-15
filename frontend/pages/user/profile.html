@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .box {
+      height: 200px;
+      width: 200px;
+      background-color: #cccccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="box">
+      <h1>Your data is:</h1>
+      <br>
+      <br>
+      ID: <div id="id"></div>
+      <br>
+      <br>
+      Role: <div id="role"></div>
+      <br>
+      <br>
+      Username: <div id="username"></div>
+    </div>
+  </div>
+</body>
+</html>
+<script>
+  getProfileInfo().then((info) => {
+    document.getElementById("id").innerHTML=info.id;
+  document.getElementById("role").innerHTML=info.role;
+  document.getElementById("username").innerHTML=info.username;
+  })
+  
+
+
+</script>

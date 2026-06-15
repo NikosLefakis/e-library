@@ -1,0 +1,39 @@
+
+  <head>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+            <script
+            src="https://code.jquery.com/jquery-3.1.0.js"></script>
+  </head>
+  <h1 style="text-align: center; margin-top: 0vh;">REGISTRATION FORM</h1>
+    <div style="display: flex; align-items: center; height: 100vh;">
+      <form style="margin: auto;" id="form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" class="form-control" id="username" name="username">
+     
+        <label for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password">
+     
+      <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+    </div>
+
+   <script src="../../assets/js/helpers.js">
+   </script>
+
+   <script>
+    $("#form").submit(function(e) {
+      e.preventDefault();
+      var formData = $(this).serializeArray();
+
+      var jsonData = {};
+
+      $.each(formData, function () {
+        jsonData[this.name] = this.value;
+      });
+      var response = register(JSON.stringify(jsonData));
+      console.log(response);
+    });
+   </script>

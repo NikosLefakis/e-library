@@ -1,0 +1,31 @@
+body {
+  background-image: url('backk.jpg');
+  background-size: cover; /* Scale the image to cover the entire page */
+  background-repeat: no-repeat; /* Do not repeat the image */
+  background-attachment: fixed; /* Keep the background image in a fixed position */
+}
+
+  #user-type {
+    width: 200px;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    appearance: none;
+  }
+  
+  #user-type:focus {
+    border-color: #555;
+    outline: none;
+  }
+
+  
+
+  form {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+

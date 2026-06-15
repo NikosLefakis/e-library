@@ -1,0 +1,29 @@
+<div>
+
+    <button type="button" id="datauser" style="width:120px; height: 60px;" onclick="data()">Your Data</button>
+    <br> <br>
+
+    <button type="button" id="editD" name="editD" style="width:120px; height: 60px;" onclick="test()">See Books!</button>
+    <br> <br>
+
+    <button type="button" id="createbooks" style="width:120px; height: 60px;" onclick="test3()">Add a book in Library!</button>
+    <br> <br>
+    
+        <button type="button" id="tableuser1" style="width:120px; height: 60px;" onclick="test4()">Show all users in E-Libraries</button>
+        <br> <br>
+      
+
+        <button type="button" id="borrowbook" style="width:120px; height: 60px;" onclick="test6()">See borrowed books</button>
+        <br> <br>
+  
+   
+</div>
+<br> <br>
+<button type="button" name="log" id="log"  style="height: 40px; width: 100px;" onclick="logout()" > Logout</button>
+
+<script>
+    if(document.cookie === "")
+    {
+        $("#load").load("pages/authentication/login.html");
+    }
+</script>

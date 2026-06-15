@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+<table id="books-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th>ISBN</th>
+        <th>Title</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="books-tbody"></tbody>
+  </table>
+
+  <script>
+    fetch("http://localhost:3000/library/books/borrowed")
+  .then(response => response.json())
+  .then(data => {
+    data.forEach(book => {
+      let tr = document.createElement("tr");
+      document.getElementById("books-tbody").appendChild(tr);
+    });
+  });
+
+  </script>

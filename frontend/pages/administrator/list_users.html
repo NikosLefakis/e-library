@@ -1,0 +1,24 @@
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<table id="users-table" class="table table-striped">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="users-table-body">
+  </tbody>
+</table>
+<script>
+fetch('http://localhost:3000/user/list')
+  .then(response => response.json())
+  .then(users => {
+    const tableBody = document.getElementById('users-table-body');
+    users.forEach(user => {
+      const row = document.createElement('tr');
+      tableBody.appendChild(row);
+    });
+  });
+</bcript>
