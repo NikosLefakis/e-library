@@ -1,20 +1,96 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
-        <script
-            src="https://code.jquery.com/jquery-3.1.0.js"></script>
-    </head>
-    <body>
-        <div style="margin-top: 120px;" class="container">
-            <form id="form">
-                <h1>Add a book in Library: </h1>
-                <div class="form-group">
-                    <label for="is�n">ISBN:</label>
-                    <input type="text" class="form-control" id="isbn" name="isbn">
-                </div>
-                <input type="submit" class="btn btn-primary" value="Submit" id='submit'>
-            </div>
+<div id="addbook-shell">
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">Add New Book</h2>
+    <p class="text-muted">Add a book to the library collection</p>
+  </div>
+  <button class="btn btn-ghost" onclick="navigate('books')"><i class="fas fa-arrow-left"></i> Back</button>
+</div>
+
+<div class="card" style="max-width:720px">
+  <div class="card-body">
+    <form id="add-book-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input type="text" name="title" class="form-control" placeholder="Book title" required>
         </div>
-    </body>
-</html>
+        <div class="form-group">
+          <label class="form-label">ISBN</label>
+          <input type="text" name="isbn" class="form-control" placeholder="e.g. 978-3-16-148410-0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Authors *</label>
+          <input type="text" name="authors" class="form-control" placeholder="Author name(s)" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Genre</label>
+          <input type="text" name="genre" class="form-control" placeholder="e.g. Fiction, Science…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pages</label>
+          <input type="number" name="pages" class="form-control" placeholder="Number of pages" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Publication Year</label>
+          <input type="number" name="publicationyear" class="form-control" placeholder="e.g. 2024" min="1000" max="2099">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="3" placeholder="A brief description of the book…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Online URL</label>
+          <input type="url" name="url" class="form-control" placeholder="https://…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cover Photo URL</label>
+          <input type="url" name="photo" class="form-control" placeholder="https://…">
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Add Book
+        </button>
+        <button type="button" class="btn btn-outline" onclick="navigate('books')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+</div>
+
+<script>
+  (function() {
+    const role = getCookie('user_role');
+    if (role !== 'administrator' && role !== 'librarian') {
+      document.getElementById('addbook-shell').innerHTML = `
+        <div class="access-denied">
+          <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
+          <h3>Access Denied</h3>
+          <p>Only librarians and administrators can add books.</p>
+        </div>`;
+      return;
+    }
+
+    $('#add-book-form').submit(function(e) {
+      e.preventDefault();
+      const btn = $(this).find('[type=submit]');
+      btn.html('<i class="fas fa-spinner fa-spin"></i> Adding…').prop('disabled', true);
+
+      const data = {};
+      $(this).serializeArray().forEach(f => { data[f.name] = f.value; });
+
+      createBook(JSON.stringify(data))
+        .then(() => {
+          toast('Book added to the library!', 'success');
+          navigate('books');
+        })
+        .catch(() => {
+          toast('Failed to add book.', 'error');
+          btn.html('<i class="fas fa-plus"></i> Add Book').prop('disabled', false);
+        });
+    });
+  })();
+</script>

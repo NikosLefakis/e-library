@@ -1,39 +1,122 @@
+<div class="auth-card" style="max-width:500px">
+  <div class="auth-logo">
+    <div class="logo-icon-lg"><i class="fas fa-user-plus"></i></div>
+    <h1>Create Account</h1>
+    <p>Register as a student to access the library</p>
+  </div>
 
-  <head>
-    <!-- Include Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-            <script
-            src="https://code.jquery.com/jquery-3.1.0.js"></script>
-  </head>
-  <h1 style="text-align: center; margin-top: 0vh;">REGISTRATION FORM</h1>
-    <div style="display: flex; align-items: center; height: 100vh;">
-      <form style="margin: auto;" id="form">
+  <form id="reg-form">
+    <div class="form-grid">
       <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" class="form-control" id="username" name="username">
-     
-        <label for="password">Password</label>
-        <input type="password" class="form-control" id="password" name="password">
-     
-      <button type="submit" class="btn btn-primary">Submit</button>
+        <label class="form-label">First Name</label>
+        <input type="text" name="firstname" class="form-control" placeholder="First name" required>
       </div>
-    </form>
+      <div class="form-group">
+        <label class="form-label">Last Name</label>
+        <input type="text" name="lastname" class="form-control" placeholder="Last name" required>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Email</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-envelope icon"></i>
+          <input type="email" name="email" class="form-control" placeholder="your@email.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-user icon"></i>
+          <input type="text" name="username" class="form-control" placeholder="Choose a username" required autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-lock icon"></i>
+          <input type="password" name="password" class="form-control" placeholder="Choose a password" required autocomplete="new-password">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Age</label>
+        <input type="number" name="age" class="form-control" placeholder="Your age" min="16" max="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gender</label>
+        <select name="gender" class="form-control">
+          <option value="">Select…</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Address</label>
+        <input type="text" name="address" class="form-control" placeholder="Your address">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="tel" name="phone" class="form-control" placeholder="+30 6900000000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">University</label>
+        <select name="university" class="form-control">
+          <option value="">Select…</option>
+          <option value="University of Crete">University of Crete</option>
+          <option value="Technical University of Crete">Technical University of Crete</option>
+          <option value="Hellenic Mediterranean University">Hellenic Mediterranean University</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Student Type</label>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+            <input type="radio" name="student_type" value="undergraduate"> Undergraduate
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+            <input type="radio" name="student_type" value="postgraduate"> Postgraduate
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+            <input type="radio" name="student_type" value="phd"> PhD
+          </label>
+        </div>
+      </div>
     </div>
 
-   <script src="../../assets/js/helpers.js">
-   </script>
+    <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:8px">
+      <i class="fas fa-user-plus"></i> Create Account
+    </button>
+  </form>
 
-   <script>
-    $("#form").submit(function(e) {
-      e.preventDefault();
-      var formData = $(this).serializeArray();
+  <p style="text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted)">
+    Already have an account?
+    <button type="button" onclick="$('#load').load('pages/authentication/login.html')"
+      style="background:none;border:none;color:var(--primary-light);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">
+      Sign In
+    </button>
+  </p>
+</div>
 
-      var jsonData = {};
-
-      $.each(formData, function () {
-        jsonData[this.name] = this.value;
+<script>
+  $('#reg-form').submit(function(e) {
+    e.preventDefault();
+    const btn = $(this).find('[type=submit]');
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Creating…').prop('disabled', true);
+    const data = {};
+    $(this).serializeArray().forEach(f => { if (f.value) data[f.name] = f.value; });
+    register(JSON.stringify(data))
+      .then(res => {
+        if (res && res.success) {
+          toast('Account created! Please sign in.', 'success');
+          $('#load').load('pages/authentication/login.html');
+        } else {
+          toast(res.error || 'Registration failed. Username may already exist.', 'error');
+          btn.html('<i class="fas fa-user-plus"></i> Create Account').prop('disabled', false);
+        }
+      })
+      .catch(() => {
+        toast('Cannot reach server.', 'error');
+        btn.html('<i class="fas fa-user-plus"></i> Create Account').prop('disabled', false);
       });
-      var response = register(JSON.stringify(jsonData));
-      console.log(response);
-    });
-   </script>
+  });
+</script>

@@ -18,7 +18,8 @@ const BookReview = db.define('book_review', {
     },
     reviewscore: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: true,
+        defaultValue: null
     }
 });
 

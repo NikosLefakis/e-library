@@ -1,29 +1,255 @@
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-<table id="books-table" class="table table-striped">
-    <thead>
-      <tr>
-        <th>ISBN</th>
-        <th>Title</th>
-        <th>Authors</th>
-        <th>Genre</th>
-        <th>Pages</th>
-        <th>Publication Year</th>
-        <th>URL</th>
-        <th>Photo of Book</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="books-tbody"></tbody>
-  </table>
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">📚 Book Collection</h2>
+    <p class="text-muted" id="books-count">Loading…</p>
+  </div>
+  <div id="role-actions"></div>
+</div>
 
-  <script>
-    fetch("http://localhost:3000/library/books")
-  .then(response => response.json())
-  .then(data => {
-    data.forEach(book => {
-      let tr = document.createElement("tr");
-      document.getElementById("books-tbody").appendChild(tr);
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+  <div class="search-wrap" style="flex:1;min-width:200px;margin-bottom:0">
+    <i class="fas fa-search"></i>
+    <input type="text" id="search-input" placeholder="Search by title, author or genre…" oninput="filterBooks()">
+  </div>
+  <select id="genre-filter" class="form-control" style="width:auto;min-width:150px" onchange="filterBooks()">
+    <option value="">All Genres</option>
+  </select>
+  <button class="btn btn-outline btn-sm" onclick="toggleAdvSearch()" style="white-space:nowrap">
+    <i class="fas fa-sliders-h"></i> Advanced
+  </button>
+</div>
+
+<div id="adv-search" style="display:none;background:var(--bg);border-radius:10px;padding:16px;margin-bottom:20px">
+  <div class="form-grid" style="gap:12px">
+    <div class="form-group" style="margin:0">
+      <label class="form-label" style="font-size:12px">Year From</label>
+      <input type="number" id="f-year-from" class="form-control" placeholder="e.g. 2000" oninput="filterBooks()">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label class="form-label" style="font-size:12px">Year To</label>
+      <input type="number" id="f-year-to" class="form-control" placeholder="e.g. 2023" oninput="filterBooks()">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label class="form-label" style="font-size:12px">Pages From</label>
+      <input type="number" id="f-pages-from" class="form-control" placeholder="e.g. 100" oninput="filterBooks()">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label class="form-label" style="font-size:12px">Pages To</label>
+      <input type="number" id="f-pages-to" class="form-control" placeholder="e.g. 500" oninput="filterBooks()">
+    </div>
+  </div>
+  <button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="clearFilters()">
+    <i class="fas fa-times"></i> Clear Filters
+  </button>
+</div>
+
+<div class="books-grid" id="books-grid">
+  <div style="grid-column:1/-1"><div class="spinner"></div></div>
+</div>
+
+<script>
+(function() {
+  let _books = [];
+  let _advVisible = false;
+
+  window.toggleAdvSearch = function() {
+    _advVisible = !_advVisible;
+    document.getElementById('adv-search').style.display = _advVisible ? 'block' : 'none';
+  };
+
+  window.clearFilters = function() {
+    ['search-input','f-year-from','f-year-to','f-pages-from','f-pages-to'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
     });
-  });
+    document.getElementById('genre-filter').value = '';
+    renderBooks(_books);
+  };
 
-  </script>
+  function renderBooks(list) {
+    const grid     = document.getElementById('books-grid');
+    const loggedIn = !!getCookie('user_id');
+    if (!list || list.length === 0) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon"><i class="fas fa-book"></i></div><h3>No books found</h3><p>Try adjusting your search or filters.</p></div>';
+      return;
+    }
+    grid.innerHTML = list.map(b => `
+      <div class="book-card">
+        <div class="book-cover">
+          ${b.photo ? `<img src="${b.photo}" alt="${b.title}" onerror="this.style.display='none'">` : ''}
+          <i class="fas fa-book" style="position:relative"></i>
+          ${b.genre ? `<span class="book-genre-tag">${b.genre}</span>` : ''}
+        </div>
+        <div class="book-info">
+          <h4>${b.title || 'Untitled'}</h4>
+          <div class="book-author"><i class="fas fa-pen-nib" style="margin-right:4px;font-size:10px;opacity:.6"></i>${b.authors || 'Unknown Author'}</div>
+          <div class="book-meta">
+            ${b.pages           ? `<span><i class="fas fa-file-alt"></i> ${b.pages}p</span>` : ''}
+            ${b.publicationyear ? `<span><i class="fas fa-calendar-alt"></i> ${b.publicationyear}</span>` : ''}
+            ${b.isbn            ? `<span><i class="fas fa-barcode"></i> ${b.isbn}</span>` : ''}
+          </div>
+          ${b.description ? `<p class="book-desc">${b.description}</p>` : ''}
+        </div>
+        <div class="book-actions">
+          ${loggedIn
+            ? `<button class="btn btn-primary btn-sm" onclick="handleBorrow(${b.id},this)"><i class="fas fa-hand-holding-open"></i> Borrow</button>`
+            : `<span style="font-size:12px;color:var(--text-muted)"><i class="fas fa-lock" style="margin-right:4px"></i>Login to borrow</span>`
+          }
+          <button class="btn btn-ghost btn-sm" onclick="openLibraries(${b.id},'${(b.title||'').replace(/'/g,"\\'")}')">
+            <i class="fas fa-map-location-dot"></i> Libraries
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="openReviews(${b.id},'${(b.title||'Book').replace(/'/g,"\\'")}')">
+            <i class="fas fa-star"></i> Reviews
+          </button>
+          ${b.url ? `<a href="${b.url}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm"><i class="fas fa-external-link-alt"></i></a>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  window.filterBooks = function() {
+    const q     = (document.getElementById('search-input').value || '').toLowerCase();
+    const genre = document.getElementById('genre-filter').value;
+    const yFrom = parseInt(document.getElementById('f-year-from').value) || null;
+    const yTo   = parseInt(document.getElementById('f-year-to').value) || null;
+    const pFrom = parseInt(document.getElementById('f-pages-from').value) || null;
+    const pTo   = parseInt(document.getElementById('f-pages-to').value) || null;
+    renderBooks(_books.filter(b => {
+      if (q && !((b.title||'').toLowerCase().includes(q)||(b.authors||'').toLowerCase().includes(q)||(b.genre||'').toLowerCase().includes(q))) return false;
+      if (genre && b.genre !== genre) return false;
+      if (yFrom && b.publicationyear < yFrom) return false;
+      if (yTo   && b.publicationyear > yTo)   return false;
+      if (pFrom && b.pages < pFrom) return false;
+      if (pTo   && b.pages > pTo)   return false;
+      return true;
+    }));
+  };
+
+  function handleBorrow(bookId, btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+    borrowBook(bookId)
+      .then(res => {
+        if (res && res.success) { toast('Borrow request sent!','success'); btn.innerHTML = '<i class="fas fa-check"></i> Requested'; }
+        else { toast(res.message||'Could not borrow book','error'); btn.innerHTML = orig; btn.disabled = false; }
+      })
+      .catch(() => { toast('Could not borrow book','error'); btn.innerHTML = orig; btn.disabled = false; });
+  }
+
+  window.openLibraries = function(bookId, title) {
+    openModal('Libraries — ' + title, '<div class="spinner"></div>');
+    getLibrariesForBook(bookId).then(rows => {
+      if (!rows || rows.error || rows.length === 0) {
+        $('#modal-body').html('<div class="empty-state" style="padding:30px 0"><div class="empty-icon"><i class="fas fa-building-columns"></i></div><h3>Not in any library yet</h3></div>');
+        return;
+      }
+      const loggedIn = !!getCookie('user_id');
+      const buildTable = (userLat, userLon) => {
+        const sorted = rows.map(r => {
+          const lib = r.library || {};
+          const dist = (userLat && lib.lat && lib.lon) ? haversineKm(userLat,userLon,lib.lat,lib.lon).toFixed(1) : null;
+          return { ...r, dist };
+        }).sort((a,b) => (a.dist!==null&&b.dist!==null) ? parseFloat(a.dist)-parseFloat(b.dist) : 0);
+
+        const tableRows = sorted.map(r => {
+          const lib = r.library || {};
+          return `<tr>
+            <td><strong>${lib.name||'—'}</strong></td>
+            <td style="font-size:13px;color:var(--text-muted)">${lib.address||'—'}</td>
+            <td>${r.available?'<span class="badge badge-green">Available</span>':'<span class="badge badge-red">Unavailable</span>'}</td>
+            <td>${r.dist?r.dist+' km':'—'}</td>
+            <td>
+              ${loggedIn&&r.available?`<button class="btn btn-primary btn-sm" onclick="borrowFromLib(${bookId},${lib.id},this)"><i class="fas fa-hand-holding-open"></i> Borrow</button>`:''}
+              ${lib.lat&&lib.lon?`<a href="https://www.openstreetmap.org/?mlat=${lib.lat}&mlon=${lib.lon}&zoom=16" target="_blank" class="btn btn-ghost btn-sm"><i class="fas fa-map"></i></a>`:''}
+            </td>
+          </tr>`;
+        }).join('');
+
+        $('#modal-body').html(`
+          ${userLat?'<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px"><i class="fas fa-location-dot" style="margin-right:4px;color:var(--accent)"></i>Sorted by distance from your location</p>':''}
+          <div class="table-wrap"><table>
+            <thead><tr><th>Library</th><th>Address</th><th>Status</th><th>Distance</th><th>Action</th></tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table></div>`);
+      };
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => buildTable(pos.coords.latitude, pos.coords.longitude),
+          ()  => buildTable(null,null), { timeout:4000 });
+      } else buildTable(null,null);
+    });
+    window.borrowFromLib = function(bookId, libId, btn) {
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+      borrowBook(bookId, libId).then(res => {
+        if (res&&res.success) { toast('Borrow request sent!','success'); closeModal(); }
+        else { toast(res.message||'Could not borrow','error'); btn.innerHTML='<i class="fas fa-hand-holding-open"></i> Borrow'; btn.disabled=false; }
+      });
+    };
+  };
+
+  window.openReviews = function(bookId, title) {
+    openModal('Reviews — ' + title, '<div class="spinner"></div>');
+    const loggedIn = !!getCookie('user_id');
+    const role = getCookie('user_role');
+    getBookReviews(bookId).then(reviews => {
+      const stars = n => '★'.repeat(n||0)+'☆'.repeat(5-(n||0));
+      const list = (reviews&&reviews.length)
+        ? reviews.map(r=>`<div style="padding:14px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <strong style="font-size:13px">${r.user?r.user.username:'User #'+r.user_id}</strong>
+              ${r.reviewscore?`<span style="color:var(--accent);font-size:14px">${stars(r.reviewscore)}</span>`:''}
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:0">${r.content}</p>
+          </div>`).join('')
+        : '<p style="text-align:center;color:var(--text-muted);padding:24px 0">No reviews yet.</p>';
+
+      const canReview = loggedIn && role === 'student';
+      const form = !canReview
+        ? `<div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:16px;font-size:13px;color:var(--text-muted)">
+            <i class="fas fa-info-circle" style="margin-right:6px"></i>${!loggedIn||role==='guest'?'Login to write a review.':'Complete a borrowing to write a review.'}
+           </div>`
+        : `<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+            <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Write a Review</h4>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px"><i class="fas fa-info-circle"></i> Only available after completing a borrowing.</p>
+            <div style="display:flex;gap:8px;margin-bottom:12px" id="star-row">
+              ${[1,2,3,4,5].map(n=>`<button type="button" onclick="setScore(${n})" data-star="${n}" style="background:none;border:none;font-size:22px;color:var(--border);cursor:pointer;padding:0;transition:color .15s">★</button>`).join('')}
+            </div>
+            <input type="hidden" id="review-score" value="">
+            <textarea id="review-text" class="form-control" rows="3" placeholder="Share your thoughts…" style="margin-bottom:12px"></textarea>
+            <button class="btn btn-primary btn-sm" onclick="submitReview(${bookId})"><i class="fas fa-paper-plane"></i> Submit Review</button>
+          </div>`;
+
+      $('#modal-body').html('<div>' + list + '</div>' + form);
+    });
+    window.setScore = function(n) {
+      $('#review-score').val(n);
+      $('#star-row button').each(function(){ $(this).css('color',$(this).data('star')<=n?'var(--accent)':'var(--border)'); });
+    };
+    window.submitReview = function(bId) {
+      const content = $('#review-text').val().trim();
+      const score = parseInt($('#review-score').val())||null;
+      if (!content) { toast('Write something first!','warning'); return; }
+      createBookReview(bId,content,score).then(res => {
+        if (res&&res.success) { toast('Review submitted!','success'); closeModal(); }
+        else toast(res.message||'Could not submit review','error');
+      }).catch(()=>toast('Error submitting review','error'));
+    };
+  };
+
+  const _role = getCookie('user_role');
+  if (_role==='administrator'||_role==='librarian') {
+    document.getElementById('role-actions').innerHTML =
+      '<button class="btn btn-accent" onclick="navigate(\'addbook\')"><i class="fas fa-plus"></i> Add Book</button>';
+  }
+
+  listBooks().then(books => {
+    _books = books || [];
+    document.getElementById('books-count').textContent = `${_books.length} book${_books.length!==1?'s':''} in the collection`;
+    const genres = [...new Set(_books.map(b=>b.genre).filter(Boolean))].sort();
+    const sel = document.getElementById('genre-filter');
+    genres.forEach(g => { const o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o); });
+    renderBooks(_books);
+  }).catch(() => {
+    document.getElementById('books-grid').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load books</h3><p>Check that the server is running.</p></div>';
+  });
+})();
+</script>

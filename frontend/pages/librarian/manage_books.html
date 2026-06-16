@@ -1,0 +1,201 @@
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">🏛️ My Library Books</h2>
+    <p class="text-muted">Manage the books available in your library</p>
+  </div>
+</div>
+
+<div id="libbooks-wrap">
+  <div class="spinner"></div>
+</div>
+
+<script>
+(function() {
+  const role = getCookie('user_role');
+  if (role !== 'administrator' && role !== 'librarian') {
+    document.getElementById('libbooks-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-lock"></i></div><h3>Access Denied</h3></div>';
+    return;
+  }
+
+  let _myLibId = null;
+
+  function renderNoLibrary() {
+    document.getElementById('libbooks-wrap').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-building-columns"></i></div>
+        <h3>No library assigned</h3>
+        <p>You don't have a library assigned yet. Contact an administrator.</p>
+      </div>`;
+  }
+
+  function loadMyLibrary() {
+    // Get my library (librarian sees the one assigned to them)
+    listLibraries().then(libs => {
+      const userId = getCookie('user_id');
+      let myLib = null;
+
+      if (role === 'librarian') {
+        myLib = libs.find(l => String(l.librarian_id) === String(userId));
+      } else if (role === 'administrator' && libs.length > 0) {
+        // Admin sees all — show a dropdown to select which library
+        myLib = libs[0];
+      }
+
+      if (!myLib) {
+        if (role === 'administrator' && libs.length > 0) {
+          myLib = libs[0];
+        } else {
+          renderNoLibrary();
+          return;
+        }
+      }
+
+      if (role === 'administrator' && libs.length > 1) {
+        // Show library selector for admin
+        document.getElementById('libbooks-wrap').innerHTML = `
+          <div class="form-group" style="max-width:300px;margin-bottom:20px">
+            <label class="form-label">Select Library</label>
+            <select class="form-control" id="lib-select" onchange="loadBooksForLib(this.value)">
+              ${libs.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+            </select>
+          </div>
+          <div id="books-in-lib"><div class="spinner"></div></div>`;
+        _myLibId = libs[0].id;
+        loadBooksForLib(libs[0].id);
+      } else {
+        _myLibId = myLib.id;
+        document.getElementById('libbooks-wrap').innerHTML = `
+          <div style="background:var(--bg);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+            <i class="fas fa-building-columns" style="font-size:20px;color:var(--primary)"></i>
+            <div>
+              <strong>${myLib.name}</strong>
+              <div style="font-size:13px;color:var(--text-muted)">${myLib.address || ''}</div>
+            </div>
+          </div>
+          <div id="books-in-lib"><div class="spinner"></div></div>`;
+        loadBooksForLib(myLib.id);
+      }
+    }).catch(() => renderNoLibrary());
+  }
+
+  window.loadBooksForLib = function(libId) {
+    _myLibId = libId;
+    const wrap = document.getElementById('books-in-lib');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="spinner"></div>';
+
+    getLibraryBooks(libId).then(rows => {
+      const hasBooks = rows && rows.length > 0;
+      wrap.innerHTML = `
+        <div class="flex-between mb-4">
+          <h3 style="font-size:15px;font-weight:700">Books in Library (${hasBooks ? rows.length : 0})</h3>
+          <button class="btn btn-accent btn-sm" onclick="openAddBook(${libId})"><i class="fas fa-plus"></i> Add Book</button>
+        </div>
+        ${!hasBooks ? '<div class="empty-state"><div class="empty-icon"><i class="fas fa-book"></i></div><h3>No books yet</h3><p>Add books to this library.</p></div>' : `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Authors</th><th>ISBN</th><th>Availability</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${rows.map(r => {
+                const b = r.book || {};
+                return `<tr>
+                  <td><strong>${b.title || '—'}</strong></td>
+                  <td style="font-size:13px;color:var(--text-muted)">${b.authors || '—'}</td>
+                  <td style="font-size:12px;color:var(--text-muted)">${b.isbn || '—'}</td>
+                  <td>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                      <input type="checkbox" ${r.available ? 'checked' : ''} onchange="toggleAvail(${libId}, ${b.id}, this.checked)">
+                      <span style="font-size:13px">${r.available ? 'Available' : 'Unavailable'}</span>
+                    </label>
+                  </td>
+                  <td>
+                    <button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="removeBook(${libId}, ${b.id}, this)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`}`;
+    });
+  };
+
+  window.toggleAvail = function(libId, bookId, available) {
+    setBookAvailability(libId, bookId, available)
+      .then(res => {
+        if (res && res.success) toast(available ? 'Marked as available' : 'Marked as unavailable', 'success');
+        else toast('Could not update', 'error');
+      });
+  };
+
+  window.removeBook = function(libId, bookId, btn) {
+    if (!confirm('Remove this book from the library?')) return;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    removeBookFromLibrary(libId, bookId).then(res => {
+      if (res && res.success) { toast('Book removed from library', 'warning'); loadBooksForLib(libId); }
+      else { toast('Could not remove', 'error'); btn.innerHTML = '<i class="fas fa-trash"></i>'; btn.disabled = false; }
+    });
+  };
+
+  window.openAddBook = function(libId) {
+    openModal('Add Book to Library', '<div class="spinner"></div>');
+    listBooks().then(books => {
+      $('#modal-body').html(`
+        <div class="form-group">
+          <label class="form-label">Search Book</label>
+          <input type="text" id="book-search-modal" class="form-control" placeholder="Type to search…" oninput="filterModalBooks()">
+        </div>
+        <div id="modal-book-list" style="max-height:320px;overflow-y:auto;margin-top:12px">
+          ${renderBookOptions(books, libId)}
+        </div>`);
+
+      window._modalBooks = books;
+      window._modalLibId = libId;
+    });
+  };
+
+  function renderBookOptions(books, libId) {
+    if (!books || books.length === 0) return '<p style="color:var(--text-muted);text-align:center;padding:20px">No books found.</p>';
+    return books.map(b => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <strong style="font-size:14px">${b.title}</strong>
+          <div style="font-size:12px;color:var(--text-muted)">${b.authors || ''} ${b.isbn ? '· ISBN: '+b.isbn : ''}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="doAddBook(${libId}, ${b.id}, this)">
+          <i class="fas fa-plus"></i> Add
+        </button>
+      </div>`).join('');
+  }
+
+  window.filterModalBooks = function() {
+    const q = document.getElementById('book-search-modal').value.toLowerCase();
+    const filtered = q ? window._modalBooks.filter(b =>
+      (b.title||'').toLowerCase().includes(q) ||
+      (b.authors||'').toLowerCase().includes(q)
+    ) : window._modalBooks;
+    document.getElementById('modal-book-list').innerHTML = renderBookOptions(filtered, window._modalLibId);
+  };
+
+  window.doAddBook = function(libId, bookId, btn) {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    addBookToLibrary(libId, bookId).then(res => {
+      if (res && res.success) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Added';
+        toast('Book added to library!', 'success');
+        loadBooksForLib(libId);
+      } else {
+        btn.innerHTML = '<i class="fas fa-plus"></i> Add';
+        btn.disabled = false;
+        toast('Already in library or error', 'warning');
+      }
+    });
+  };
+
+  loadMyLibrary();
+})();
+</script>

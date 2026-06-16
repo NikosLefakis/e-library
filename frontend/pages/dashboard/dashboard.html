@@ -22,7 +22,7 @@
 <button type="button" name="log" id="log"  style="height: 40px; width: 100px;" onclick="logout()" > Logout</button>
 
 <script>
-    if(document.cookie === "")
+    if(!getCookie('user_id'))
     {
         $("#load").load("pages/authentication/login.html");
     }

@@ -4,18 +4,14 @@ const User = require('./user');
 const Book = require('./book');
 
 const BookBorrowing = db.define('book_borrowing', {
-    book_id: {
-      type: Sequelize.INTEGER,
-      allowNull: false
-    },
-    user_id: {
-        type:Sequelize.INTEGER,
-        allowNull: false
-    },
-    status: {
-        type: Sequelize.ENUM("requested","borrowed","returned","successEnd")
-    }
+    book_id:    { type: Sequelize.INTEGER, allowNull: false },
+    user_id:    { type: Sequelize.INTEGER, allowNull: false },
+    library_id: { type: Sequelize.INTEGER, allowNull: true },
+    status:     { type: Sequelize.ENUM("requested","borrowed","returned","successEnd"), defaultValue: "requested" },
+    fromDate:   { type: Sequelize.DATE, allowNull: true },
+    toDate:     { type: Sequelize.DATE, allowNull: true }
 });
+
 BookBorrowing.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 BookBorrowing.belongsTo(Book, { foreignKey: 'book_id', as: 'book' });
 

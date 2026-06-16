@@ -1,0 +1,173 @@
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">📋 Manage Borrowings</h2>
+    <p class="text-muted">Review and manage book borrow requests</p>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-outline btn-sm" onclick="printBorrowings()"><i class="fas fa-print"></i> Export / Print</button>
+  </div>
+</div>
+
+<!-- Filter tabs -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap" id="filter-tabs">
+  <button class="btn btn-primary btn-sm" onclick="setFilter('all', this)">All</button>
+  <button class="btn btn-outline btn-sm" onclick="setFilter('requested', this)"><i class="fas fa-clock"></i> Pending</button>
+  <button class="btn btn-outline btn-sm" onclick="setFilter('borrowed', this)"><i class="fas fa-book-open"></i> Active</button>
+  <button class="btn btn-outline btn-sm" onclick="setFilter('returned', this)"><i class="fas fa-undo"></i> Returned</button>
+  <button class="btn btn-outline btn-sm" onclick="setFilter('successEnd', this)"><i class="fas fa-check-circle"></i> Completed</button>
+</div>
+
+<div id="borrow-wrap">
+  <div class="spinner"></div>
+</div>
+
+<script>
+(function() {
+  const role = getCookie('user_role');
+  if (role !== 'administrator' && role !== 'librarian') {
+    document.getElementById('borrow-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-lock"></i></div><h3>Access Denied</h3></div>';
+    return;
+  }
+
+  let _all = [];
+  let _filter = 'all';
+
+  function statusBadge(s) {
+    const labels = { requested: 'Requested', borrowed: 'Active', returned: 'Returned', successEnd: 'Completed' };
+    const map = { requested:'badge-amber', borrowed:'badge-blue', returned:'badge-green', successEnd:'badge-gray' };
+    return `<span class="badge ${map[s]||'badge-gray'}">${labels[s]||s}</span>`;
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('el-GR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  window.setFilter = function(f, btn) {
+    _filter = f;
+    document.querySelectorAll('#filter-tabs button').forEach(b => b.className = 'btn btn-outline btn-sm');
+    btn.className = 'btn btn-primary btn-sm';
+    render();
+  };
+
+  function render() {
+    const wrap = document.getElementById('borrow-wrap');
+    const list = _filter === 'all' ? _all : _all.filter(b => b.status === _filter);
+
+    if (!list || list.length === 0) {
+      wrap.innerHTML = `<div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+        <h3>No borrowings${_filter !== 'all' ? ' in this category' : ''}</h3>
+      </div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="table-wrap" id="printable">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Book</th>
+              <th>Student</th>
+              <th>Status</th>
+              <th>From</th>
+              <th>Due</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(b => {
+              const book = b.book || {};
+              const user = b.user || {};
+              const name = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || '—';
+              return `<tr>
+                <td style="color:var(--text-muted);font-size:13px">#${b.id}</td>
+                <td>
+                  <strong style="font-size:14px">${book.title || '—'}</strong><br>
+                  <span style="font-size:12px;color:var(--text-muted)">${book.isbn ? 'ISBN: '+book.isbn : ''}</span>
+                </td>
+                <td>
+                  <div style="font-size:14px">${name}</div>
+                  <div style="font-size:12px;color:var(--text-muted)">${user.email || ''}</div>
+                </td>
+                <td>${statusBadge(b.status)}</td>
+                <td class="text-sm text-muted">${fmtDate(b.fromDate || b.createdAt)}</td>
+                <td class="text-sm text-muted">${fmtDate(b.toDate)}</td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    ${b.status === 'requested' ? `
+                      <button class="btn btn-primary btn-sm" onclick="doApprove(${b.id}, this)"><i class="fas fa-check"></i> Approve</button>
+                      <button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="doReject(${b.id}, this)"><i class="fas fa-times"></i> Reject</button>
+                    ` : ''}
+                    ${b.status === 'returned' ? `
+                      <button class="btn btn-primary btn-sm" onclick="doConfirm(${b.id}, this)"><i class="fas fa-check-double"></i> Confirm Return</button>
+                    ` : ''}
+                    ${b.status === 'borrowed' ? `<span style="font-size:12px;color:var(--text-muted)">Awaiting return</span>` : ''}
+                    ${b.status === 'successEnd' ? `<span style="font-size:12px;color:#10b981"><i class="fas fa-check-circle"></i> Done</span>` : ''}
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  window.doApprove = function(id, btn) {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    approveBorrowing(id).then(res => {
+      if (res && res.success) { toast('Request approved!', 'success'); loadAll(); }
+      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check"></i> Approve'; btn.disabled = false; }
+    });
+  };
+
+  window.doReject = function(id, btn) {
+    if (!confirm('Reject and delete this borrow request?')) return;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    rejectBorrowing(id).then(res => {
+      if (res && res.success) { toast('Request rejected.', 'warning'); loadAll(); }
+      else { toast(res.message || 'Failed', 'error'); btn.disabled = false; }
+    });
+  };
+
+  window.doConfirm = function(id, btn) {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    confirmReturn(id).then(res => {
+      if (res && res.success) { toast('Return confirmed!', 'success'); loadAll(); }
+      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check-double"></i> Confirm Return'; btn.disabled = false; }
+    });
+  };
+
+  window.printBorrowings = function() {
+    const content = document.getElementById('printable');
+    if (!content) { toast('No data to print', 'warning'); return; }
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Borrowings Report</title>
+      <style>body{font-family:Arial,sans-serif;font-size:13px}table{width:100%;border-collapse:collapse}
+      th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#0f2238;color:white}
+      h2{color:#0f2238}</style></head><body>
+      <h2>E-Library — Borrowings Report</h2>
+      <p>Generated: ${new Date().toLocaleString()}</p>
+      ${content.innerHTML}</body></html>`);
+    win.document.close();
+    win.print();
+  };
+
+  function loadAll() {
+    getAllBorrowings().then(data => {
+      _all = Array.isArray(data) ? data : [];
+      render();
+    }).catch(() => {
+      document.getElementById('borrow-wrap').innerHTML =
+        '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load data</h3></div>';
+    });
+  }
+
+  loadAll();
+})();
+</script>

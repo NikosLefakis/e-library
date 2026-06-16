@@ -1,24 +1,95 @@
+<div id="users-shell">
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">👥 Manage Users</h2>
+    <p class="text-muted" id="users-count">Loading…</p>
+  </div>
+</div>
 
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-<table id="users-table" class="table table-striped">
-  <thead>
-    <tr>
-      <th>Username</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="users-table-body">
-  </tbody>
-</table>
+<div id="users-wrap">
+  <div class="spinner"></div>
+</div>
+</div>
+
 <script>
-fetch('http://localhost:3000/user/list')
-  .then(response => response.json())
-  .then(users => {
-    const tableBody = document.getElementById('users-table-body');
-    users.forEach(user => {
-      const row = document.createElement('tr');
-      tableBody.appendChild(row);
-    });
-  });
-</bcript>
+  (function() {
+    if (getCookie('user_role') !== 'administrator') {
+      document.getElementById('users-shell').innerHTML = `
+        <div class="access-denied">
+          <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
+          <h3>Access Denied</h3>
+          <p>This area is for administrators only.</p>
+        </div>`;
+      return;
+    }
+
+    function roleBadge(r) {
+      const map = { administrator: 'badge-red', librarian: 'badge-blue', student: 'badge-green' };
+      return '<span class="badge ' + (map[r] || 'badge-gray') + '">' + (r || '—') + '</span>';
+    }
+
+    function handleDelete(id, btn) {
+      if (!confirm('Delete this user? This cannot be undone.')) return;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btn.disabled = true;
+      deleteUser(id).then(() => {
+        toast('User deleted', 'success');
+        $(btn).closest('tr').fadeOut(300, function() { $(this).remove(); });
+        const count = document.querySelectorAll('#users-wrap tbody tr').length - 1;
+        document.getElementById('users-count').textContent = count + ' user' + (count !== 1 ? 's' : '') + ' registered';
+      }).catch(() => {
+        toast('Could not delete user', 'error');
+        btn.innerHTML = '<i class="fas fa-trash"></i>';
+        btn.disabled = false;
+      });
+    }
+    window.handleDelete = handleDelete;
+
+    listUsers()
+      .then(users => {
+        const count = (users || []).length;
+        document.getElementById('users-count').textContent = count + ' user' + (count !== 1 ? 's' : '') + ' registered';
+        const wrap = document.getElementById('users-wrap');
+
+        if (!users || users.length === 0) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-users"></i></div><h3>No users found</h3></div>';
+          return;
+        }
+
+        wrap.innerHTML = `
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${users.map(u => `
+                  <tr>
+                    <td class="text-sm text-muted">#${u.id}</td>
+                    <td><strong>${u.username || '—'}</strong></td>
+                    <td class="text-muted">${[u.firstname, u.lastname].filter(Boolean).join(' ') || '—'}</td>
+                    <td class="text-muted text-sm">${u.email || '—'}</td>
+                    <td>${roleBadge(u.role)}</td>
+                    <td>
+                      <button class="btn btn-danger btn-sm" onclick="handleDelete(${u.id}, this)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      })
+      .catch(() => {
+        document.getElementById('users-wrap').innerHTML =
+          '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load users</h3></div>';
+      });
+  })();
+</script>

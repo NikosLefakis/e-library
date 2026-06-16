@@ -1,37 +1,126 @@
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-icon-lg"><i class="fas fa-book-open"></i></div>
+    <h1>E-Library</h1>
+    <p>Your digital library portal</p>
+  </div>
 
-<head>
-    <link rel="stylesheet" href="cssStyles/user.css">
-            <script
-            src="https://code.jquery.com/jquery-3.1.0.js"></script>
-</head>
+  <!-- Tabs -->
+  <div style="display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:4px;margin-bottom:24px;gap:4px">
+    <button type="button" id="tab-user" onclick="switchTab('user')"
+      style="flex:1;padding:9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:white;color:var(--text);box-shadow:var(--shadow-sm);font-family:inherit;transition:all .2s">
+      <i class="fas fa-user" style="margin-right:6px"></i>User Login
+    </button>
+    <button type="button" id="tab-admin" onclick="switchTab('admin')"
+      style="flex:1;padding:9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:inherit;transition:all .2s">
+      <i class="fas fa-shield-halved" style="margin-right:6px"></i>Admin Portal
+    </button>
+  </div>
 
-<form id="form">
-    <label for="username">Username:</label>
-    <input type="text" id="username" name="username">
-    <br>
-    <label for="password">Password:</label>
-    <input type="password" id="password" name="password">
-    <br><br>
-    <input type="submit">Login</input>
-    <p>Don't have an account? <button onclick="registerPageLoad()" id="signup-link">Sign Up</button></p>
-    <p>Continue as guest: <button onclick="guestLogin()">here</button></p>
-</form>
+  <!-- User login -->
+  <div id="panel-user">
+    <form id="login-form-user">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-user icon"></i>
+          <input type="text" name="username" class="form-control" placeholder="Enter your username" required autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-lock icon"></i>
+          <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:4px">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+    </form>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:18px 0">
+      <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text-muted)">OR</span>
+      <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+    </div>
+
+    <button type="button" class="btn btn-outline btn-block" onclick="guestLogin()" style="margin-bottom:18px">
+      <i class="fas fa-user-clock"></i> Continue as Guest
+    </button>
+
+    <p style="text-align:center;font-size:13px;color:var(--text-muted)">
+      Don't have an account?
+      <button type="button" onclick="registerPageLoad()"
+        style="background:none;border:none;color:var(--primary-light);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">
+        Sign Up
+      </button>
+    </p>
+  </div>
+
+  <!-- Admin login -->
+  <div id="panel-admin" style="display:none">
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:10px">
+      <i class="fas fa-shield-halved" style="margin-top:2px;flex-shrink:0"></i>
+      <div>
+        <strong>Admin / Librarian Portal</strong><br>
+        Sign in with your administrator or librarian credentials to manage books and users.
+      </div>
+    </div>
+    <form id="login-form-admin">
+      <div class="form-group">
+        <label class="form-label">Admin Username</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-user-shield icon"></i>
+          <input type="text" name="username" class="form-control" placeholder="Admin username" required autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-lock icon"></i>
+          <input type="password" name="password" class="form-control" placeholder="Admin password" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-block btn-lg" style="background:var(--primary-dark);color:white;margin-top:4px">
+        <i class="fas fa-shield-halved"></i> Enter Admin Portal
+      </button>
+    </form>
+  </div>
+</div>
 
 <script>
-    if(document.cookie)
-    {
-        $("#load").load("pages/dashboard/dashboard.html");
-    }
-    $("#form").submit(function(e) {
-      e.preventDefault();
-      var formData = $(this).serializeArray();
+  function switchTab(tab) {
+    const isAdmin = tab === 'admin';
+    $('#panel-user').toggle(!isAdmin);
+    $('#panel-admin').toggle(isAdmin);
+    $('#tab-user').css({ background: isAdmin ? 'none' : 'white', color: isAdmin ? 'var(--text-muted)' : 'var(--text)', boxShadow: isAdmin ? 'none' : 'var(--shadow-sm)' });
+    $('#tab-admin').css({ background: isAdmin ? 'white' : 'none', color: isAdmin ? 'var(--text)' : 'var(--text-muted)', boxShadow: isAdmin ? 'var(--shadow-sm)' : 'none' });
+  }
 
-      var jsonData = {};
-
-      $.each(formData, function () {
-        jsonData[this.name] = this.value;
+  function doLogin(form) {
+    const btn = form.find('[type=submit]');
+    const orig = btn.html();
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Signing in…').prop('disabled', true);
+    const data = {};
+    form.serializeArray().forEach(f => { data[f.name] = f.value; });
+    login(JSON.stringify(data))
+      .then(res => {
+        if (res && res.success) {
+          toast('Welcome back!', 'success');
+          showApp();
+          navigate('books');
+        } else {
+          toast('Wrong username or password', 'error');
+          btn.html(orig).prop('disabled', false);
+        }
+      })
+      .catch(() => {
+        toast('Cannot reach server — is it running?', 'error');
+        btn.html(orig).prop('disabled', false);
       });
-      var response = login(JSON.stringify(jsonData));
-      console.log(response);
-    });
+  }
+
+  $('#login-form-user').submit(function(e)  { e.preventDefault(); doLogin($(this)); });
+  $('#login-form-admin').submit(function(e) { e.preventDefault(); doLogin($(this)); });
 </script>

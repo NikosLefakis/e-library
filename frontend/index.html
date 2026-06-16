@@ -1,41 +1,81 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>My Website </title>
-  
-    <link rel="stylesheet" href="cssStyles/styles.css">
-    <link rel="shortcut icon" href="#">
-    
-  
-    <meta charset="UTF-8">
-    <meta name = "author" content="Form Nikos-Lefakis">
-    <meta name = "viewport" content="width=device-width , initial-scale = 1.0">
-    <script
-            src="https://code.jquery.com/jquery-3.1.0.js"></script>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Library — University of Crete</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="cssStyles/styles.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+<body>
+  <div id="auth-container">
+    <div id="load"></div>
+  </div>
 
-    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+  <div id="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+        <div><strong>E-Library</strong><span>Digital Library</span></div>
+      </div>
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sb-avatar">?</div>
+        <div class="user-info"><strong id="sb-username">…</strong><span id="sb-role">-</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Library</div>
+        <button class="nav-item" id="nav-books" onclick="navigate('books')"><i class="fas fa-book"></i> Browse Books</button>
+        <button class="nav-item" id="nav-borrowed" onclick="navigate('borrowed')" style="display:none"><i class="fas fa-bookmark"></i> My Borrowings</button>
 
-    
-    <style>
-     body {
-  background-image: url('backk.jpg');
-  background-size: cover; /* Scale the image to cover the entire page */
-  background-repeat: no-repeat; /* Do not repeat the image */
-  background-attachment: fixed; /* Keep the background image in a fixed position */
-  background-attachment: fixed;
-}
+        <div class="nav-label" id="mgmt-label" style="display:none">Management</div>
+        <button class="nav-item" id="nav-addbook" onclick="navigate('addbook')" style="display:none"><i class="fas fa-plus-circle"></i> Add Book</button>
+        <button class="nav-item" id="nav-libbooks" onclick="navigate('libbooks')" style="display:none"><i class="fas fa-building-columns"></i> My Library Books</button>
+        <button class="nav-item" id="nav-manageborrow" onclick="navigate('manageborrow')" style="display:none"><i class="fas fa-clipboard-list"></i> Manage Borrowings</button>
 
-    </style>
-  </head>
+        <div class="nav-label" id="admin-label" style="display:none">Admin</div>
+        <button class="nav-item" id="nav-users" onclick="navigate('users')" style="display:none"><i class="fas fa-users"></i> Manage Users</button>
+        <button class="nav-item" id="nav-libraries" onclick="navigate('libraries')" style="display:none"><i class="fas fa-map-location-dot"></i> Libraries</button>
+        <button class="nav-item" id="nav-stats" onclick="navigate('stats')" style="display:none"><i class="fas fa-chart-pie"></i> Statistics</button>
 
-  <body id="bd">
-    <div style="display: flex; align-items: center; justify-content: center; height: 100vh;">
-      <div id="load"></div>
+        <div class="nav-label">Account</div>
+        <button class="nav-item" id="nav-profile" onclick="navigate('profile')" style="display:none"><i class="fas fa-user-circle"></i> My Profile</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <div id="app-load" class="page-body"></div>
+      <footer class="app-footer">
+        <div class="footer-links">
+          <a href="https://www.uoc.gr" target="_blank" rel="noopener">University of Crete</a>
+          <a href="https://www.tuc.gr" target="_blank" rel="noopener">Technical University of Crete</a>
+          <a href="https://www.helmepa.gr" target="_blank" rel="noopener">HELMEPA</a>
+          <a href="https://www.abebooks.com" target="_blank" rel="noopener">AbeBooks</a>
+        </div>
+        <div class="footer-copy">© 2023 E-Library — HY-359 University of Crete</div>
+      </footer>
     </div>
-  </body>
-  
-  
+  </div>
+
+  <div class="toast-box" id="toast-box"></div>
+
+  <div id="modal-overlay" onclick="if(event.target===this)closeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:24px;">
+    <div id="modal-box" style="background:white;border-radius:16px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:white;z-index:1;">
+        <h3 id="modal-title" style="font-size:17px;font-weight:700"></h3>
+        <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">×</button>
+      </div>
+      <div id="modal-body" style="padding:24px"></div>
+    </div>
+  </div>
+
+  <script src="assets/js/helpers.js"></script>
   <script src="script.js"></script>
-  <script src="./assets/js/helpers.js"></script>
- 
+</body>
 </html>

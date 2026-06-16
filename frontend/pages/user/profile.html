@@ -1,54 +1,137 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    .container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-
-    .box {
-      height: 200px;
-      width: 200px;
-      background-color: #cccccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="box">
-      <h1>Your data is:</h1>
-      <br>
-      <br>
-      ID: <div id="id"></div>
-      <br>
-      <br>
-      Role: <div id="role"></div>
-      <br>
-      <br>
-      Username: <div id="username"></div>
-    </div>
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">My Profile</h2>
+    <p class="text-muted">View and edit your account information</p>
   </div>
-</body>
-</html>
+</div>
+
+<div id="profile-wrap" style="max-width:600px">
+  <div class="spinner"></div>
+</div>
+
 <script>
-  getProfileInfo().then((info) => {
-    document.getElementById("id").innerHTML=info.id;
-  document.getElementById("role").innerHTML=info.role;
-  document.getElementById("username").innerHTML=info.username;
-  })
-  
+(function() {
+  const roleBadge = { administrator:'badge-red', librarian:'badge-blue', student:'badge-green' };
 
+  getProfileInfo().then(info => {
+    const wrap = document.getElementById('profile-wrap');
+    if (!info) { wrap.innerHTML = '<div class="empty-state"><h3>Could not load profile</h3></div>'; return; }
+    const init = (info.username||'?').charAt(0).toUpperCase();
 
+    const studentExtra = info.role === 'student' ? `
+      <div class="form-group">
+        <label class="form-label">Age</label>
+        <input type="number" name="age" class="form-control" value="${info.age||''}" placeholder="Your age" min="16" max="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gender</label>
+        <select name="gender" class="form-control">
+          <option value="">Select…</option>
+          <option value="male" ${info.gender==='male'?'selected':''}>Male</option>
+          <option value="female" ${info.gender==='female'?'selected':''}>Female</option>
+          <option value="other" ${info.gender==='other'?'selected':''}>Other</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Address</label>
+        <input type="text" name="address" class="form-control" value="${info.address||''}" placeholder="Your address">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="tel" name="phone" class="form-control" value="${info.phone||''}" placeholder="+30 6900000000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">University</label>
+        <select name="university" class="form-control">
+          <option value="">Select…</option>
+          <option value="University of Crete" ${info.university==='University of Crete'?'selected':''}>University of Crete</option>
+          <option value="Technical University of Crete" ${info.university==='Technical University of Crete'?'selected':''}>Technical University of Crete</option>
+          <option value="Hellenic Mediterranean University" ${info.university==='Hellenic Mediterranean University'?'selected':''}>Hellenic Mediterranean University</option>
+          <option value="Other" ${info.university==='Other'?'selected':''}>Other</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Student Type</label>
+        <select name="student_type" class="form-control">
+          <option value="">Select…</option>
+          <option value="undergraduate" ${info.student_type==='undergraduate'?'selected':''}>Undergraduate</option>
+          <option value="postgraduate" ${info.student_type==='postgraduate'?'selected':''}>Postgraduate</option>
+          <option value="phd" ${info.student_type==='phd'?'selected':''}>PhD</option>
+        </select>
+      </div>` : '';
+
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="card-body">
+          <div class="profile-head">
+            <div class="profile-avatar">${init}</div>
+            <div class="profile-info">
+              <h2>${info.username}</h2>
+              <span class="badge ${roleBadge[info.role]||'badge-gray'}">${info.role||'student'}</span>
+            </div>
+          </div>
+          <hr class="divider">
+          <form id="profile-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Username</label>
+                <input class="form-control" value="${info.username||''}" readonly style="background:var(--bg)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <input class="form-control" value="${info.role||'student'}" readonly style="background:var(--bg)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">First Name</label>
+                <input type="text" name="firstname" class="form-control" value="${info.firstname||''}" placeholder="Your first name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Last Name</label>
+                <input type="text" name="lastname" class="form-control" value="${info.lastname||''}" placeholder="Your last name">
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Email</label>
+                <div class="input-icon-wrap">
+                  <i class="fas fa-envelope icon"></i>
+                  <input type="email" name="email" class="form-control" value="${info.email||''}" placeholder="your@email.com">
+                </div>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
+                <div class="input-icon-wrap">
+                  <i class="fas fa-lock icon"></i>
+                  <input type="password" name="password" class="form-control" placeholder="New password…">
+                </div>
+              </div>
+              ${studentExtra}
+            </div>
+            <hr class="divider">
+            <div class="flex gap-2">
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="reset" class="btn btn-outline">Reset</button>
+            </div>
+          </form>
+        </div>
+      </div>`;
+
+    $('#profile-form').submit(function(e) {
+      e.preventDefault();
+      const btn = $(this).find('[type=submit]');
+      btn.html('<i class="fas fa-spinner fa-spin"></i> Saving…').prop('disabled', true);
+      const data = {};
+      $(this).serializeArray().forEach(f => { if (f.value) data[f.name] = f.value; });
+      updateProfile(info.id, data).then(res => {
+        if (res&&res.success) {
+          toast('Profile updated!','success');
+          const name = [data.firstname||info.firstname, data.lastname||info.lastname].filter(Boolean).join(' ');
+          if (name) $('#sb-username').text(name);
+        } else toast('Could not save changes','error');
+        btn.html('<i class="fas fa-save"></i> Save Changes').prop('disabled', false);
+      }).catch(()=>{ toast('Server error','error'); btn.html('<i class="fas fa-save"></i> Save Changes').prop('disabled',false); });
+    });
+  }).catch(()=>{
+    document.getElementById('profile-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load profile</h3></div>';
+  });
+})();
 </script>

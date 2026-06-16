@@ -1,0 +1,147 @@
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">🏛️ Libraries</h2>
+    <p class="text-muted">Manage library locations across Crete</p>
+  </div>
+  <button class="btn btn-accent" onclick="openAddLibrary()"><i class="fas fa-plus"></i> Add Library</button>
+</div>
+
+<div id="lib-wrap">
+  <div class="spinner"></div>
+</div>
+
+<script>
+(function() {
+  const role = getCookie('user_role');
+  if (role !== 'administrator') {
+    document.getElementById('lib-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-lock"></i></div><h3>Access Denied</h3></div>';
+    return;
+  }
+
+  function loadLibraries() {
+    listLibraries().then(libs => {
+      const wrap = document.getElementById('lib-wrap');
+      if (!libs || libs.length === 0) {
+        wrap.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-building-columns"></i></div>
+            <h3>No libraries yet</h3>
+            <p>Add a library to get started.</p>
+          </div>`;
+        return;
+      }
+      wrap.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Address</th><th>Coordinates</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${libs.map(lib => `
+                <tr>
+                  <td><strong>${lib.name}</strong></td>
+                  <td style="color:var(--text-muted)">${lib.address || '—'}</td>
+                  <td style="font-size:12px;color:var(--text-muted)">
+                    ${lib.lat && lib.lon ? `${lib.lat}, ${lib.lon}` : '—'}
+                    ${lib.lat && lib.lon ? `<a href="https://www.openstreetmap.org/?mlat=${lib.lat}&mlon=${lib.lon}&zoom=16" target="_blank" style="margin-left:6px;color:var(--accent)"><i class="fas fa-map"></i></a>` : ''}
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn btn-ghost btn-sm" onclick="openViewBooks(${lib.id}, '${lib.name.replace(/'/g,"\\'")}')">
+                        <i class="fas fa-book"></i> Books
+                      </button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    });
+  }
+
+  window.openAddLibrary = function() {
+    openModal('Add Library', `
+      <form id="lib-form">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Library Name</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. University of Crete Library" required>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Address</label>
+            <input type="text" name="address" class="form-control" placeholder="e.g. Voutes, Heraklion, Crete">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Latitude</label>
+            <input type="number" step="any" name="lat" class="form-control" placeholder="e.g. 35.3387">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Longitude</label>
+            <input type="number" step="any" name="lon" class="form-control" placeholder="e.g. 25.1342">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Librarian ID (optional)</label>
+            <input type="number" name="librarian_id" class="form-control" placeholder="User ID of the librarian">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Library</button>
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>`);
+
+    $('#lib-form').submit(function(e) {
+      e.preventDefault();
+      const btn = $(this).find('[type=submit]');
+      btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving…');
+      const data = {};
+      $(this).serializeArray().forEach(f => { if (f.value) data[f.name] = f.value; });
+      if (data.lat) data.lat = parseFloat(data.lat);
+      if (data.lon) data.lon = parseFloat(data.lon);
+      createLibrary(data).then(res => {
+        if (res && res.success) { toast('Library added!', 'success'); closeModal(); loadLibraries(); }
+        else { toast(res.error || 'Could not add library', 'error'); btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Library'); }
+      });
+    });
+  };
+
+  window.openViewBooks = function(libId, libName) {
+    openModal('Books in ' + libName, '<div class="spinner"></div>');
+    getLibraryBooks(libId).then(rows => {
+      if (!rows || rows.length === 0) {
+        $('#modal-body').html('<div class="empty-state" style="padding:20px 0"><p>No books assigned to this library yet.</p></div>');
+        return;
+      }
+      const tableRows = rows.map(r => {
+        const b = r.book || {};
+        return `<tr>
+          <td><strong>${b.title || '—'}</strong></td>
+          <td style="font-size:13px;color:var(--text-muted)">${b.authors || '—'}</td>
+          <td>${r.available ? '<span class="badge badge-green">Available</span>' : '<span class="badge badge-red">Unavailable</span>'}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="toggleAvail(${libId}, ${b.id}, ${r.available}, this)">
+              <i class="fas fa-toggle-${r.available ? 'on' : 'off'}"></i> ${r.available ? 'Mark Unavailable' : 'Mark Available'}
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+      $('#modal-body').html(`
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Authors</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>`);
+    });
+
+    window.toggleAvail = function(libId, bookId, current, btn) {
+      const newVal = !current;
+      setBookAvailability(libId, bookId, newVal).then(res => {
+        if (res && res.success) { toast('Updated!', 'success'); openViewBooks(libId, libName); }
+        else toast('Could not update', 'error');
+      });
+    };
+  };
+
+  loadLibraries();
+})();
+</script>

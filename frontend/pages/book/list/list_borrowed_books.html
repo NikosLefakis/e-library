@@ -1,24 +1,118 @@
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+<div class="flex-between mb-6">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">📖 My Borrowings</h2>
+    <p class="text-muted">Books you have borrowed or requested</p>
+  </div>
+</div>
 
-<table id="books-table" class="table table-striped">
-    <thead>
-      <tr>
-        <th>ISBN</th>
-        <th>Title</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="books-tbody"></tbody>
-  </table>
+<div id="notif-area"></div>
+<div id="borrowed-wrap"><div class="spinner"></div></div>
 
-  <script>
-    fetch("http://localhost:3000/library/books/borrowed")
-  .then(response => response.json())
-  .then(data => {
-    data.forEach(book => {
-      let tr = document.createElement("tr");
-      document.getElementById("books-tbody").appendChild(tr);
-    });
+<script>
+(function() {
+  function statusBadge(s) {
+    const labels = { requested:'Requested', borrowed:'Borrowed', returned:'Returned', successEnd:'Completed' };
+    const map = { requested:'badge-amber', borrowed:'badge-blue', returned:'badge-green', successEnd:'badge-gray' };
+    return '<span class="badge '+(map[s]||'badge-gray')+'">'+(labels[s]||s)+'</span>';
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  }
+  function daysLeft(toDate) {
+    if (!toDate) return null;
+    return Math.ceil((new Date(toDate)-new Date())/(1000*60*60*24));
+  }
+
+  window._handleReturn = function(id, btn) {
+    if (!confirm('Mark this book as returned?')) return;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+    returnBook(id).then(res => {
+      if (res&&res.success) { toast('Book marked as returned!','success'); navigate('borrowed'); }
+      else { toast(res.message||'Could not update','error'); btn.innerHTML='<i class="fas fa-undo"></i> Return'; btn.disabled=false; }
+    }).catch(()=>{ toast('Server error','error'); btn.disabled=false; });
+  };
+
+  listBorrowedBooks().then(data => {
+    const wrap  = document.getElementById('borrowed-wrap');
+    const notif = document.getElementById('notif-area');
+    if (!data||data.error||data.length===0) {
+      wrap.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-bookmark"></i></div>
+        <h3>No borrowings yet</h3><p>Browse the collection and borrow your first book!</p>
+        <button class="btn btn-primary" onclick="navigate('books')"><i class="fas fa-search"></i> Browse Books</button></div>`;
+      return;
+    }
+    const expiring = data.filter(b=>b.status==='borrowed'&&b.toDate&&daysLeft(b.toDate)<=3&&daysLeft(b.toDate)>=0);
+    if (expiring.length>0) {
+      notif.innerHTML = expiring.map(b=>`
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;font-size:14px;color:#92400e">
+          <i class="fas fa-exclamation-triangle" style="font-size:18px;color:#d97706"></i>
+          <div><strong>${b.title}</strong> is due in <strong>${daysLeft(b.toDate)} day${daysLeft(b.toDate)!==1?'s':''}</strong> (${fmtDate(b.toDate)}). Please return it soon!</div>
+        </div>`).join('');
+    }
+    wrap.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Title</th><th>Authors</th><th>Status</th><th>Borrow Date</th><th>Due Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${data.map(b => {
+            const days = daysLeft(b.toDate);
+            const dueSoon = b.status==='borrowed'&&days!==null&&days<=3&&days>=0;
+            const overdue = b.status==='borrowed'&&days!==null&&days<0;
+            return `<tr ${dueSoon?'style="background:#fffbeb"':overdue?'style="background:#fef2f2"':''}>
+              <td><strong>${b.title||'—'}</strong></td>
+              <td style="color:var(--text-muted);font-size:13px">${b.authors||'—'}</td>
+              <td>${statusBadge(b.status)}${overdue?' <span style="color:#dc2626;font-size:11px">OVERDUE</span>':''}</td>
+              <td class="text-sm text-muted">${fmtDate(b.fromDate||b.createdAt)}</td>
+              <td class="text-sm ${overdue?'text-danger':dueSoon?'text-warning':'text-muted'}">${fmtDate(b.toDate)}</td>
+              <td>
+                ${b.status==='borrowed'?`<button class="btn btn-outline btn-sm" onclick="_handleReturn(${b.id},this)"><i class="fas fa-undo"></i> Return</button>`:''}
+                ${b.status==='successEnd'?`<button class="btn btn-ghost btn-sm" onclick="openReviews(${b.book_id},'${(b.title||'').replace(/'/g,"\\'")}')"><i class="fas fa-star"></i> Review</button>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>`;
+  }).catch(()=>{
+    document.getElementById('borrowed-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load data</h3></div>';
   });
 
-  </script>
+  window.openReviews = function(bookId, title) {
+    openModal('Reviews — '+title,'<div class="spinner"></div>');
+    const loggedIn = !!getCookie('user_id');
+    getBookReviews(bookId).then(reviews => {
+      const stars = n=>'★'.repeat(n||0)+'☆'.repeat(5-(n||0));
+      const list = (reviews&&reviews.length)
+        ? reviews.map(r=>`<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+            <strong style="font-size:13px">${r.user?r.user.username:'User #'+r.user_id}</strong>
+            ${r.reviewscore?`<span style="color:var(--accent);margin-left:8px">${stars(r.reviewscore)}</span>`:''}
+            <p style="font-size:14px;color:var(--text-muted);margin:4px 0 0">${r.content}</p>
+          </div>`).join('')
+        : '<p style="text-align:center;color:var(--text-muted);padding:20px 0">No reviews yet.</p>';
+      const form = loggedIn?`
+        <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+          <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Write a Review</h4>
+          <div style="display:flex;gap:8px;margin-bottom:12px" id="star-row">
+            ${[1,2,3,4,5].map(n=>`<button type="button" onclick="setScore(${n})" data-star="${n}" style="background:none;border:none;font-size:22px;color:var(--border);cursor:pointer;padding:0">★</button>`).join('')}
+          </div>
+          <input type="hidden" id="review-score" value="">
+          <textarea id="review-text" class="form-control" rows="3" placeholder="Share your thoughts…" style="margin-bottom:12px"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="submitReview(${bookId})"><i class="fas fa-paper-plane"></i> Submit</button>
+        </div>`:'';
+      $('#modal-body').html('<div>'+list+'</div>'+form);
+    });
+    window.setScore = function(n) {
+      $('#review-score').val(n);
+      $('#star-row button').each(function(){$(this).css('color',$(this).data('star')<=n?'var(--accent)':'var(--border)');});
+    };
+    window.submitReview = function(bId) {
+      const content=$('#review-text').val().trim(), score=parseInt($('#review-score').val())||null;
+      if(!content){toast('Write something first!','warning');return;}
+      createBookReview(bId,content,score).then(res=>{
+        if(res&&res.success){toast('Review submitted!','success');closeModal();}
+        else toast(res.message||'Could not submit review','error');
+      });
+    };
+  };
+})();
+</script>
