@@ -8,10 +8,39 @@
 <div id="notif-area"></div>
 <div id="borrowed-wrap"><div class="spinner"></div></div>
 
+<style>
+.borrow-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: box-shadow .2s, transform .2s;
+  align-items: flex-start;
+}
+.borrow-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.09); transform: translateY(-1px); }
+.borrow-cover {
+  width: 72px; min-width: 72px; height: 100px;
+  border-radius: 8px; overflow: hidden;
+  background: linear-gradient(135deg, #0d1f35, #1e40af);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: rgba(255,255,255,0.4); position: relative;
+}
+.borrow-cover img { width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0; }
+.borrow-body { flex: 1; min-width: 0; }
+.borrow-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.borrow-author { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.borrow-meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.borrow-meta-item { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+.borrow-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+
 <script>
 (function() {
   function statusBadge(s) {
-    const labels = { requested:'Requested', borrowed:'Borrowed', returned:'Returned', successEnd:'Completed' };
+    const labels = { requested:'Requested', borrowed:'Active', returned:'Returned', successEnd:'Completed' };
     const map = { requested:'badge-amber', borrowed:'badge-blue', returned:'badge-green', successEnd:'badge-gray' };
     return '<span class="badge '+(map[s]||'badge-gray')+'">'+(labels[s]||s)+'</span>';
   }
@@ -25,12 +54,19 @@
   }
 
   window._handleReturn = function(id, btn) {
-    if (!confirm('Mark this book as returned?')) return;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-    returnBook(id).then(res => {
-      if (res&&res.success) { toast('Book marked as returned!','success'); navigate('borrowed'); }
-      else { toast(res.message||'Could not update','error'); btn.innerHTML='<i class="fas fa-undo"></i> Return'; btn.disabled=false; }
-    }).catch(()=>{ toast('Server error','error'); btn.disabled=false; });
+    confirmDialog({
+      title: 'Return Book',
+      message: 'Are you sure you want to mark this book as returned?',
+      type: 'warning',
+      okText: 'Yes, Return',
+      onOk: function() {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+        returnBook(id).then(res => {
+          if (res&&res.success) { toast('Book marked as returned!','success'); navigate('borrowed'); }
+          else { toast(res.message||'Could not update','error'); btn.innerHTML='<i class="fas fa-undo"></i> Return Book'; btn.disabled=false; }
+        }).catch(()=>{ toast('Server error','error'); btn.disabled=false; });
+      }
+    });
   };
 
   listBorrowedBooks().then(data => {
@@ -50,28 +86,39 @@
           <div><strong>${b.title}</strong> is due in <strong>${daysLeft(b.toDate)} day${daysLeft(b.toDate)!==1?'s':''}</strong> (${fmtDate(b.toDate)}). Please return it soon!</div>
         </div>`).join('');
     }
-    wrap.innerHTML = `
-      <div class="table-wrap"><table>
-        <thead><tr><th>Title</th><th>Authors</th><th>Status</th><th>Borrow Date</th><th>Due Date</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${data.map(b => {
-            const days = daysLeft(b.toDate);
-            const dueSoon = b.status==='borrowed'&&days!==null&&days<=3&&days>=0;
-            const overdue = b.status==='borrowed'&&days!==null&&days<0;
-            return `<tr ${dueSoon?'style="background:#fffbeb"':overdue?'style="background:#fef2f2"':''}>
-              <td><strong>${b.title||'—'}</strong></td>
-              <td style="color:var(--text-muted);font-size:13px">${b.authors||'—'}</td>
-              <td>${statusBadge(b.status)}${overdue?' <span style="color:#dc2626;font-size:11px">OVERDUE</span>':''}</td>
-              <td class="text-sm text-muted">${fmtDate(b.fromDate||b.createdAt)}</td>
-              <td class="text-sm ${overdue?'text-danger':dueSoon?'text-warning':'text-muted'}">${fmtDate(b.toDate)}</td>
-              <td>
-                ${b.status==='borrowed'?`<button class="btn btn-outline btn-sm" onclick="_handleReturn(${b.id},this)"><i class="fas fa-undo"></i> Return</button>`:''}
-                ${b.status==='successEnd'?`<button class="btn btn-ghost btn-sm" onclick="openReviews(${b.book_id},'${(b.title||'').replace(/'/g,"\\'")}')"><i class="fas fa-star"></i> Review</button>`:''}
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table></div>`;
+
+    wrap.innerHTML = data.map(b => {
+      const days = daysLeft(b.toDate);
+      const dueSoon = b.status==='borrowed'&&days!==null&&days<=3&&days>=0;
+      const overdue = b.status==='borrowed'&&days!==null&&days<0;
+      const extra = overdue ? 'border-color:#fca5a5;background:#fff5f5' : dueSoon ? 'border-color:#fde68a;background:#fffbeb' : '';
+      return `
+      <div class="borrow-card" style="${extra}">
+        <div class="borrow-cover">
+          <i class="fas fa-book"></i>
+          ${b.photo ? `<img src="${b.photo}" alt="${b.title}" onerror="this.remove()">` : ''}
+        </div>
+        <div class="borrow-body">
+          <div class="borrow-title">${b.title||'Untitled'}</div>
+          <div class="borrow-author"><i class="fas fa-pen-nib" style="margin-right:4px;opacity:.5;font-size:10px"></i>${b.authors||'Unknown Author'}</div>
+          <div class="borrow-meta">
+            <div class="borrow-meta-item">${statusBadge(b.status)}${overdue?' <span style="color:#dc2626;font-size:11px;font-weight:700;margin-left:4px">OVERDUE</span>':''}</div>
+            <div class="borrow-meta-item"><i class="fas fa-calendar-alt"></i> ${fmtDate(b.fromDate||b.createdAt)}</div>
+            <div class="borrow-meta-item">
+              <i class="fas fa-calendar-check" style="color:${overdue?'#dc2626':dueSoon?'#d97706':'inherit'}"></i>
+              <span style="color:${overdue?'#dc2626':dueSoon?'#d97706':'inherit'}">Due ${fmtDate(b.toDate)}</span>
+            </div>
+            ${b.isbn ? `<div class="borrow-meta-item"><i class="fas fa-barcode"></i> ${b.isbn}</div>` : ''}
+          </div>
+          <div class="borrow-actions">
+            ${b.status==='borrowed' ? `<button class="btn btn-outline btn-sm" onclick="_handleReturn(${b.id},this)"><i class="fas fa-undo"></i> Return Book</button>` : ''}
+            ${b.status==='successEnd' ? `<button class="btn btn-ghost btn-sm" onclick="openReviews(${b.book_id},'${(b.title||'').replace(/'/g,"\\'")}')"><i class="fas fa-star"></i> Write Review</button>` : ''}
+            ${b.status==='requested' ? `<span style="font-size:12px;color:var(--text-muted);background:var(--bg);padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-clock"></i> Awaiting librarian approval</span>` : ''}
+            ${b.status==='returned' ? `<span style="font-size:12px;color:#059669;background:#ecfdf5;padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-check"></i> Awaiting return confirmation</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }).catch(()=>{
     document.getElementById('borrowed-wrap').innerHTML =
       '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load data</h3></div>';

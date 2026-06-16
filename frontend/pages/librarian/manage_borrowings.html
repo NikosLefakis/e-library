@@ -3,23 +3,58 @@
     <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">📋 Manage Borrowings</h2>
     <p class="text-muted">Review and manage book borrow requests</p>
   </div>
-  <div style="display:flex;gap:10px">
-    <button class="btn btn-outline btn-sm" onclick="printBorrowings()"><i class="fas fa-print"></i> Export / Print</button>
+  <button class="btn btn-outline btn-sm" onclick="printBorrowings()"><i class="fas fa-print"></i> Export / Print</button>
+</div>
+
+<!-- Filter tabs + search -->
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  <div style="display:flex;gap:6px;flex-wrap:wrap" id="filter-tabs">
+    <button class="btn btn-primary btn-sm" onclick="setFilter('all', this)">All</button>
+    <button class="btn btn-outline btn-sm" onclick="setFilter('requested', this)"><i class="fas fa-clock"></i> Pending</button>
+    <button class="btn btn-outline btn-sm" onclick="setFilter('borrowed', this)"><i class="fas fa-book-open"></i> Active</button>
+    <button class="btn btn-outline btn-sm" onclick="setFilter('returned', this)"><i class="fas fa-undo"></i> Returned</button>
+    <button class="btn btn-outline btn-sm" onclick="setFilter('successEnd', this)"><i class="fas fa-check-circle"></i> Completed</button>
+  </div>
+  <div class="search-wrap" style="flex:1;min-width:160px;max-width:280px;margin-bottom:0">
+    <i class="fas fa-search"></i>
+    <input type="text" id="borrow-search" placeholder="Search book or student…" oninput="renderFiltered()">
   </div>
 </div>
 
-<!-- Filter tabs -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap" id="filter-tabs">
-  <button class="btn btn-primary btn-sm" onclick="setFilter('all', this)">All</button>
-  <button class="btn btn-outline btn-sm" onclick="setFilter('requested', this)"><i class="fas fa-clock"></i> Pending</button>
-  <button class="btn btn-outline btn-sm" onclick="setFilter('borrowed', this)"><i class="fas fa-book-open"></i> Active</button>
-  <button class="btn btn-outline btn-sm" onclick="setFilter('returned', this)"><i class="fas fa-undo"></i> Returned</button>
-  <button class="btn btn-outline btn-sm" onclick="setFilter('successEnd', this)"><i class="fas fa-check-circle"></i> Completed</button>
-</div>
+<div id="borrow-wrap"><div class="spinner"></div></div>
 
-<div id="borrow-wrap">
-  <div class="spinner"></div>
-</div>
+<style>
+.borrow-row {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  transition: box-shadow .15s;
+}
+.borrow-row:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.borrow-row-cover {
+  width: 40px; min-width: 40px; height: 56px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #0d1f35, #1e40af);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: rgba(255,255,255,0.4);
+  overflow: hidden; position: relative;
+}
+.borrow-row-cover img { width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0; }
+.borrow-row-book { flex:1.2; min-width:0; }
+.borrow-row-book strong { font-size:13px;display:block; }
+.borrow-row-book span { font-size:11px;color:var(--text-muted); }
+.borrow-row-student { flex:1; min-width:0; }
+.borrow-row-student div { font-size:13px; }
+.borrow-row-student span { font-size:11px;color:var(--text-muted); }
+.borrow-row-dates { flex:.8; font-size:12px;color:var(--text-muted); }
+.borrow-row-status { flex:.6; }
+.borrow-row-actions { display:flex;gap:6px;flex-shrink:0; }
+</style>
 
 <script>
 (function() {
@@ -34,7 +69,7 @@
   let _filter = 'all';
 
   function statusBadge(s) {
-    const labels = { requested: 'Requested', borrowed: 'Active', returned: 'Returned', successEnd: 'Completed' };
+    const labels = { requested:'Requested', borrowed:'Active', returned:'Returned', successEnd:'Completed' };
     const map = { requested:'badge-amber', borrowed:'badge-blue', returned:'badge-green', successEnd:'badge-gray' };
     return `<span class="badge ${map[s]||'badge-gray'}">${labels[s]||s}</span>`;
   }
@@ -48,13 +83,23 @@
     _filter = f;
     document.querySelectorAll('#filter-tabs button').forEach(b => b.className = 'btn btn-outline btn-sm');
     btn.className = 'btn btn-primary btn-sm';
-    render();
+    renderFiltered();
   };
 
-  function render() {
-    const wrap = document.getElementById('borrow-wrap');
-    const list = _filter === 'all' ? _all : _all.filter(b => b.status === _filter);
+  window.renderFiltered = function() {
+    const q = (document.getElementById('borrow-search').value||'').toLowerCase();
+    let list = _filter === 'all' ? _all : _all.filter(b => b.status === _filter);
+    if (q) list = list.filter(b => {
+      const book = b.book||{};
+      const user = b.user||{};
+      const name = [user.firstname, user.lastname].filter(Boolean).join(' ').toLowerCase();
+      return (book.title||'').toLowerCase().includes(q) || (user.username||'').toLowerCase().includes(q) || name.includes(q);
+    });
+    render(list);
+  };
 
+  function render(list) {
+    const wrap = document.getElementById('borrow-wrap');
     if (!list || list.length === 0) {
       wrap.innerHTML = `<div class="empty-state">
         <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
@@ -63,56 +108,41 @@
       return;
     }
 
-    wrap.innerHTML = `
-      <div class="table-wrap" id="printable">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Book</th>
-              <th>Student</th>
-              <th>Status</th>
-              <th>From</th>
-              <th>Due</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${list.map(b => {
-              const book = b.book || {};
-              const user = b.user || {};
-              const name = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || '—';
-              return `<tr>
-                <td style="color:var(--text-muted);font-size:13px">#${b.id}</td>
-                <td>
-                  <strong style="font-size:14px">${book.title || '—'}</strong><br>
-                  <span style="font-size:12px;color:var(--text-muted)">${book.isbn ? 'ISBN: '+book.isbn : ''}</span>
-                </td>
-                <td>
-                  <div style="font-size:14px">${name}</div>
-                  <div style="font-size:12px;color:var(--text-muted)">${user.email || ''}</div>
-                </td>
-                <td>${statusBadge(b.status)}</td>
-                <td class="text-sm text-muted">${fmtDate(b.fromDate || b.createdAt)}</td>
-                <td class="text-sm text-muted">${fmtDate(b.toDate)}</td>
-                <td>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    ${b.status === 'requested' ? `
-                      <button class="btn btn-primary btn-sm" onclick="doApprove(${b.id}, this)"><i class="fas fa-check"></i> Approve</button>
-                      <button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="doReject(${b.id}, this)"><i class="fas fa-times"></i> Reject</button>
-                    ` : ''}
-                    ${b.status === 'returned' ? `
-                      <button class="btn btn-primary btn-sm" onclick="doConfirm(${b.id}, this)"><i class="fas fa-check-double"></i> Confirm Return</button>
-                    ` : ''}
-                    ${b.status === 'borrowed' ? `<span style="font-size:12px;color:var(--text-muted)">Awaiting return</span>` : ''}
-                    ${b.status === 'successEnd' ? `<span style="font-size:12px;color:#10b981"><i class="fas fa-check-circle"></i> Done</span>` : ''}
-                  </div>
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+    wrap.innerHTML = `<div id="printable">${list.map(b => {
+      const book = b.book || {};
+      const user = b.user || {};
+      const name = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || '—';
+      return `<div class="borrow-row">
+        <div class="borrow-row-cover">
+          <i class="fas fa-book"></i>
+          ${book.photo ? `<img src="${book.photo}" onerror="this.remove()">` : ''}
+        </div>
+        <div class="borrow-row-book">
+          <strong>${book.title||'—'}</strong>
+          <span>${book.isbn ? '#'+book.isbn : ''}</span>
+        </div>
+        <div class="borrow-row-student">
+          <div>${name}</div>
+          <span>${user.email||''}</span>
+        </div>
+        <div class="borrow-row-dates">
+          <div><i class="fas fa-calendar-alt" style="opacity:.5"></i> ${fmtDate(b.fromDate||b.createdAt)}</div>
+          <div><i class="fas fa-calendar-check" style="opacity:.5"></i> ${fmtDate(b.toDate)}</div>
+        </div>
+        <div class="borrow-row-status">${statusBadge(b.status)}</div>
+        <div class="borrow-row-actions">
+          ${b.status === 'requested' ? `
+            <button class="btn btn-primary btn-sm" onclick="doApprove(${b.id}, this)" title="Approve"><i class="fas fa-check"></i></button>
+            <button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="doReject(${b.id}, this)" title="Reject"><i class="fas fa-times"></i></button>
+          ` : ''}
+          ${b.status === 'returned' ? `
+            <button class="btn btn-primary btn-sm" onclick="doConfirm(${b.id}, this)"><i class="fas fa-check-double"></i> Confirm</button>
+          ` : ''}
+          ${b.status === 'borrowed' ? `<span style="font-size:11px;color:var(--text-muted)">Awaiting return</span>` : ''}
+          ${b.status === 'successEnd' ? `<span style="font-size:11px;color:#10b981"><i class="fas fa-check-circle"></i> Done</span>` : ''}
+        </div>
       </div>`;
+    }).join('')}</div>`;
   }
 
   window.doApprove = function(id, btn) {
@@ -120,17 +150,24 @@
     btn.disabled = true;
     approveBorrowing(id).then(res => {
       if (res && res.success) { toast('Request approved!', 'success'); loadAll(); }
-      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check"></i> Approve'; btn.disabled = false; }
+      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check"></i>'; btn.disabled = false; }
     });
   };
 
   window.doReject = function(id, btn) {
-    if (!confirm('Reject and delete this borrow request?')) return;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-    rejectBorrowing(id).then(res => {
-      if (res && res.success) { toast('Request rejected.', 'warning'); loadAll(); }
-      else { toast(res.message || 'Failed', 'error'); btn.disabled = false; }
+    confirmDialog({
+      title: 'Reject Request',
+      message: 'Reject and delete this borrow request?',
+      type: 'danger',
+      okText: 'Reject',
+      onOk: function() {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        rejectBorrowing(id).then(res => {
+          if (res && res.success) { toast('Request rejected.', 'warning'); loadAll(); }
+          else { toast(res.message || 'Failed', 'error'); btn.disabled = false; }
+        });
+      }
     });
   };
 
@@ -139,7 +176,7 @@
     btn.disabled = true;
     confirmReturn(id).then(res => {
       if (res && res.success) { toast('Return confirmed!', 'success'); loadAll(); }
-      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check-double"></i> Confirm Return'; btn.disabled = false; }
+      else { toast(res.message || 'Failed', 'error'); btn.innerHTML = '<i class="fas fa-check-double"></i> Confirm'; btn.disabled = false; }
     });
   };
 
@@ -150,7 +187,7 @@
     win.document.write(`<!DOCTYPE html><html><head><title>Borrowings Report</title>
       <style>body{font-family:Arial,sans-serif;font-size:13px}table{width:100%;border-collapse:collapse}
       th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#0f2238;color:white}
-      h2{color:#0f2238}</style></head><body>
+      h2{color:#0f2238}.borrow-row{display:flex;gap:10px;padding:8px;border-bottom:1px solid #eee}</style></head><body>
       <h2>E-Library — Borrowings Report</h2>
       <p>Generated: ${new Date().toLocaleString()}</p>
       ${content.innerHTML}</body></html>`);
@@ -161,7 +198,7 @@
   function loadAll() {
     getAllBorrowings().then(data => {
       _all = Array.isArray(data) ? data : [];
-      render();
+      renderFiltered();
     }).catch(() => {
       document.getElementById('borrow-wrap').innerHTML =
         '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load data</h3></div>';

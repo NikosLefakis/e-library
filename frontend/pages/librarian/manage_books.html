@@ -131,12 +131,19 @@
   };
 
   window.removeBook = function(libId, bookId, btn) {
-    if (!confirm('Remove this book from the library?')) return;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-    removeBookFromLibrary(libId, bookId).then(res => {
-      if (res && res.success) { toast('Book removed from library', 'warning'); loadBooksForLib(libId); }
-      else { toast('Could not remove', 'error'); btn.innerHTML = '<i class="fas fa-trash"></i>'; btn.disabled = false; }
+    confirmDialog({
+      title: 'Remove Book',
+      message: 'Remove this book from the library?',
+      type: 'danger',
+      okText: 'Remove',
+      onOk: function() {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        removeBookFromLibrary(libId, bookId).then(res => {
+          if (res && res.success) { toast('Book removed from library', 'warning'); loadBooksForLib(libId); }
+          else { toast('Could not remove', 'error'); btn.innerHTML = '<i class="fas fa-trash"></i>'; btn.disabled = false; }
+        });
+      }
     });
   };
 

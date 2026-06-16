@@ -5,9 +5,44 @@
   </div>
 </div>
 
-<div id="profile-wrap" style="max-width:600px">
-  <div class="spinner"></div>
-</div>
+<div id="profile-wrap"><div class="spinner"></div></div>
+
+<style>
+.profile-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  max-width: 860px;
+  align-items: start;
+}
+@media (max-width: 700px) { .profile-layout { grid-template-columns: 1fr; } }
+.profile-left {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.profile-photo-wrap {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: linear-gradient(135deg, #0f2238, #1e40af);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; font-weight: 800; color: white;
+  cursor: pointer; position: relative; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15,34,56,0.2);
+  transition: transform .2s;
+}
+.profile-photo-wrap:hover { transform: scale(1.04); }
+.profile-photo-wrap img { width:100%;height:100%;object-fit:cover; }
+.profile-photo-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s; flex-direction: column; gap: 4px;
+}
+.profile-photo-wrap:hover .profile-photo-overlay { opacity: 1; }
+.profile-photo-overlay i { font-size: 20px; color: white; }
+.profile-photo-overlay span { font-size: 11px; color: white; font-weight: 600; }
+.profile-user-name { font-size: 17px; font-weight: 800; text-align: center; }
+.profile-stat { background: var(--bg); border-radius: 10px; padding: 12px 16px; width: 100%; text-align: center; }
+.profile-stat-val { font-size: 22px; font-weight: 800; color: var(--primary); }
+.profile-stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+</style>
 
 <script>
 (function() {
@@ -16,7 +51,7 @@
   getProfileInfo().then(info => {
     const wrap = document.getElementById('profile-wrap');
     if (!info) { wrap.innerHTML = '<div class="empty-state"><h3>Could not load profile</h3></div>'; return; }
-    const init = (info.username||'?').charAt(0).toUpperCase();
+    const init = (info.firstname || info.username || '?').charAt(0).toUpperCase();
 
     const studentExtra = info.role === 'student' ? `
       <div class="form-group">
@@ -61,59 +96,101 @@
       </div>` : '';
 
     wrap.innerHTML = `
-      <div class="card">
-        <div class="card-body">
-          <div class="profile-head">
-            <div class="profile-avatar">${init}</div>
-            <div class="profile-info">
-              <h2>${info.username}</h2>
-              <span class="badge ${roleBadge[info.role]||'badge-gray'}">${info.role||'student'}</span>
-            </div>
+      <div class="profile-layout">
+        <!-- Left column -->
+        <div class="profile-left">
+          <input type="file" id="photo-input" accept="image/*" style="display:none">
+          <div class="profile-photo-wrap" onclick="document.getElementById('photo-input').click()" title="Click to change photo" id="photo-wrap">
+            ${info.photo ? `<img src="${info.photo}" id="photo-img">` : `<span id="photo-init">${init}</span>`}
+            <div class="profile-photo-overlay"><i class="fas fa-camera"></i><span>Change Photo</span></div>
           </div>
-          <hr class="divider">
-          <form id="profile-form">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Username</label>
-                <input class="form-control" value="${info.username||''}" readonly style="background:var(--bg)">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Role</label>
-                <input class="form-control" value="${info.role||'student'}" readonly style="background:var(--bg)">
-              </div>
-              <div class="form-group">
-                <label class="form-label">First Name</label>
-                <input type="text" name="firstname" class="form-control" value="${info.firstname||''}" placeholder="Your first name">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Last Name</label>
-                <input type="text" name="lastname" class="form-control" value="${info.lastname||''}" placeholder="Your last name">
-              </div>
-              <div class="form-group full">
-                <label class="form-label">Email</label>
-                <div class="input-icon-wrap">
-                  <i class="fas fa-envelope icon"></i>
-                  <input type="email" name="email" class="form-control" value="${info.email||''}" placeholder="your@email.com">
+          <div class="profile-user-name">${[info.firstname, info.lastname].filter(Boolean).join(' ') || info.username}</div>
+          <span class="badge ${roleBadge[info.role]||'badge-gray'}" style="font-size:13px;padding:5px 14px">${info.role||'student'}</span>
+          <div class="profile-stat">
+            <div class="profile-stat-val" id="stat-borrowed">—</div>
+            <div class="profile-stat-lbl"><i class="fas fa-bookmark"></i> Total Borrowings</div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="card">
+          <div class="card-body">
+            <form id="profile-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Username</label>
+                  <input class="form-control" value="${info.username||''}" readonly style="background:var(--bg);color:var(--text-muted)">
                 </div>
-              </div>
-              <div class="form-group full">
-                <label class="form-label">New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
-                <div class="input-icon-wrap">
-                  <i class="fas fa-lock icon"></i>
-                  <input type="password" name="password" class="form-control" placeholder="New password…">
+                <div class="form-group">
+                  <label class="form-label">Role</label>
+                  <input class="form-control" value="${info.role||'student'}" readonly style="background:var(--bg);color:var(--text-muted)">
                 </div>
+                <div class="form-group">
+                  <label class="form-label">First Name</label>
+                  <input type="text" name="firstname" class="form-control" value="${info.firstname||''}" placeholder="Your first name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name</label>
+                  <input type="text" name="lastname" class="form-control" value="${info.lastname||''}" placeholder="Your last name">
+                </div>
+                <div class="form-group full">
+                  <label class="form-label">Email</label>
+                  <div class="input-icon-wrap">
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="email" name="email" class="form-control" value="${info.email||''}" placeholder="your@email.com">
+                  </div>
+                </div>
+                <div class="form-group full">
+                  <label class="form-label">New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
+                  <div class="input-icon-wrap">
+                    <i class="fas fa-lock icon"></i>
+                    <input type="password" name="password" class="form-control" placeholder="New password…">
+                  </div>
+                </div>
+                ${studentExtra}
               </div>
-              ${studentExtra}
-            </div>
-            <hr class="divider">
-            <div class="flex gap-2">
-              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-              <button type="reset" class="btn btn-outline">Reset</button>
-            </div>
-          </form>
+              <hr class="divider">
+              <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                <button type="reset" class="btn btn-outline">Reset</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>`;
 
+    // Load borrowing count
+    listBorrowedBooks().then(data => {
+      const el = document.getElementById('stat-borrowed');
+      if (el) el.textContent = (data && !data.error) ? data.length : '0';
+    }).catch(()=>{});
+
+    // Photo upload
+    document.getElementById('photo-input').addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { toast('Image too large (max 5MB)', 'warning'); return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result;
+        updateProfile(info.id, { photo: base64 }).then(res => {
+          if (res && res.success) {
+            toast('Profile photo updated!', 'success');
+            const wrap = document.getElementById('photo-wrap');
+            const existing = document.getElementById('photo-img') || document.getElementById('photo-init');
+            if (existing) existing.remove();
+            const img = document.createElement('img');
+            img.src = base64; img.id = 'photo-img';
+            wrap.insertBefore(img, wrap.firstChild);
+            // Update sidebar
+            $('#sb-avatar').html(`<img src="${base64}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;display:block">`);
+          } else toast('Could not update photo', 'error');
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Form submit
     $('#profile-form').submit(function(e) {
       e.preventDefault();
       const btn = $(this).find('[type=submit]');

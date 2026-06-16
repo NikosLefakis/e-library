@@ -9,7 +9,7 @@
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
   <div class="search-wrap" style="flex:1;min-width:200px;margin-bottom:0">
     <i class="fas fa-search"></i>
-    <input type="text" id="search-input" placeholder="Search by title, author or genre…" oninput="filterBooks()">
+    <input type="text" id="search-input" placeholder="Search by title, author, ISBN or genre…" oninput="filterBooks()">
   </div>
   <select id="genre-filter" class="form-control" style="width:auto;min-width:150px" onchange="filterBooks()">
     <option value="">All Genres</option>
@@ -113,7 +113,7 @@
     const pFrom = parseInt(document.getElementById('f-pages-from').value) || null;
     const pTo   = parseInt(document.getElementById('f-pages-to').value) || null;
     renderBooks(_books.filter(b => {
-      if (q && !((b.title||'').toLowerCase().includes(q)||(b.authors||'').toLowerCase().includes(q)||(b.genre||'').toLowerCase().includes(q))) return false;
+      if (q && !((b.title||'').toLowerCase().includes(q)||(b.authors||'').toLowerCase().includes(q)||(b.genre||'').toLowerCase().includes(q)||(b.isbn||'').toLowerCase().includes(q))) return false;
       if (genre && b.genre !== genre) return false;
       if (yFrom && b.publicationyear < yFrom) return false;
       if (yTo   && b.publicationyear > yTo)   return false;

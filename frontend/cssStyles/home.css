@@ -1,17 +1,16 @@
-/* select:active, select:focus {
-    background-color: #545a57; /* Red background color */
+
    
   h1 {
-    font-family: 'Open Sans', sans-serif; /* Change the font */
-    font-size: 36px; /* Change the font size */
-    color: #006699; /* Change the color */
-    text-shadow: 2px 2px #cccccc; /* Apply text-shadow */
-    letter-spacing: 1px; /* Apply letter-spacing */
-    text-transform: uppercase; /* Apply text-transform */
-    line-height: 1.5; /* Apply line-height */
-    font-weight: 600; /* Apply font-weight */
-    text-align: center; /* Apply text-align */
-    text-decoration: underline; /* Apply text-decoration */
+    font-family: 'Open Sans', sans-serif; 
+    font-size: 36px; 
+    color: #006699; 
+    text-shadow: 2px 2px #cccccc; 
+    letter-spacing: 1px; 
+    text-transform: uppercase; 
+    line-height: 1.5; 
+    font-weight: 600; 
+    text-align: center; 
+    text-decoration: underline; 
   }
 
 

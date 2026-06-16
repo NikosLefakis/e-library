@@ -7,90 +7,142 @@
   <button class="btn btn-ghost" onclick="navigate('books')"><i class="fas fa-arrow-left"></i> Back</button>
 </div>
 
-<div class="card" style="max-width:720px">
-  <div class="card-body">
-    <form id="add-book-form">
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Title *</label>
-          <input type="text" name="title" class="form-control" placeholder="Book title" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">ISBN</label>
-          <input type="text" name="isbn" class="form-control" placeholder="e.g. 978-3-16-148410-0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Authors *</label>
-          <input type="text" name="authors" class="form-control" placeholder="Author name(s)" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Genre</label>
-          <input type="text" name="genre" class="form-control" placeholder="e.g. Fiction, Science…">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Pages</label>
-          <input type="number" name="pages" class="form-control" placeholder="Number of pages" min="1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Publication Year</label>
-          <input type="number" name="publicationyear" class="form-control" placeholder="e.g. 2024" min="1000" max="2099">
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Description</label>
-          <textarea name="description" class="form-control" rows="3" placeholder="A brief description of the book…"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Online URL</label>
-          <input type="url" name="url" class="form-control" placeholder="https://…">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Cover Photo URL</label>
-          <input type="url" name="photo" class="form-control" placeholder="https://…">
-        </div>
-      </div>
+<div style="display:grid;grid-template-columns:200px 1fr;gap:24px;max-width:800px;align-items:start">
 
-      <hr class="divider">
-      <div class="flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="fas fa-plus"></i> Add Book
-        </button>
-        <button type="button" class="btn btn-outline" onclick="navigate('books')">Cancel</button>
-      </div>
-    </form>
+  <!-- Cover preview -->
+  <div>
+    <div id="cover-preview" onclick="document.getElementById('cover-file-input').click()" style="width:200px;height:280px;border-radius:12px;background:linear-gradient(135deg,#0d1f35,#1e40af);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px dashed rgba(255,255,255,0.2);overflow:hidden;position:relative;transition:all .2s">
+      <i class="fas fa-image" style="font-size:36px;color:rgba(255,255,255,0.4);margin-bottom:8px"></i>
+      <span style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center;padding:0 12px">Click to upload cover<br>(PNG, JPG)</span>
+    </div>
+    <input type="file" id="cover-file-input" accept="image/png,image/jpeg,image/jpg,image/webp" style="display:none">
+    <input type="hidden" id="cover-base64" name="photo_base64">
+    <div style="margin-top:10px">
+      <label class="form-label" style="font-size:11px;margin-bottom:4px">Or paste a URL:</label>
+      <input type="url" id="cover-url-input" class="form-control" placeholder="https://covers.openlibrary.org/…" style="font-size:12px">
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <div class="card-body">
+      <form id="add-book-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="Book title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ISBN</label>
+            <input type="text" name="isbn" class="form-control" placeholder="e.g. 978-3-16-148410-0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Authors *</label>
+            <input type="text" name="authors" class="form-control" placeholder="Author name(s)" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Genre</label>
+            <input type="text" name="genre" class="form-control" placeholder="e.g. Fiction, Science…">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pages</label>
+            <input type="number" name="pages" class="form-control" placeholder="Number of pages" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Publication Year</label>
+            <input type="number" name="publicationyear" class="form-control" placeholder="e.g. 2024" min="1000" max="2099">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="A brief description of the book…"></textarea>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Online URL</label>
+            <input type="url" name="url" class="form-control" placeholder="https://…">
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Book
+          </button>
+          <button type="button" class="btn btn-outline" onclick="navigate('books')">Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 </div>
 
 <script>
-  (function() {
-    const role = getCookie('user_role');
-    if (role !== 'administrator' && role !== 'librarian') {
-      document.getElementById('addbook-shell').innerHTML = `
-        <div class="access-denied">
-          <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
-          <h3>Access Denied</h3>
-          <p>Only librarians and administrators can add books.</p>
-        </div>`;
-      return;
-    }
+(function() {
+  const role = getCookie('user_role');
+  if (role !== 'administrator' && role !== 'librarian') {
+    document.getElementById('addbook-shell').innerHTML = `
+      <div class="access-denied">
+        <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
+        <h3>Access Denied</h3>
+        <p>Only librarians and administrators can add books.</p>
+      </div>`;
+    return;
+  }
 
-    $('#add-book-form').submit(function(e) {
-      e.preventDefault();
-      const btn = $(this).find('[type=submit]');
-      btn.html('<i class="fas fa-spinner fa-spin"></i> Adding…').prop('disabled', true);
+  let _photoData = '';
 
-      const data = {};
-      $(this).serializeArray().forEach(f => { data[f.name] = f.value; });
+  // File upload → base64
+  document.getElementById('cover-file-input').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast('Image too large (max 5MB)', 'warning'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      _photoData = e.target.result;
+      const prev = document.getElementById('cover-preview');
+      prev.innerHTML = `<img src="${_photoData}" style="width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer" onclick="event.stopPropagation();clearCover()"><i class="fas fa-times"></i></div>`;
+      document.getElementById('cover-url-input').value = '';
+    };
+    reader.readAsDataURL(file);
+  });
 
-      createBook(JSON.stringify(data))
-        .then(() => {
-          toast('Book added to the library!', 'success');
-          navigate('books');
-        })
-        .catch(() => {
-          toast('Failed to add book.', 'error');
-          btn.html('<i class="fas fa-plus"></i> Add Book').prop('disabled', false);
-        });
-    });
-  })();
+  // URL input → live preview
+  document.getElementById('cover-url-input').addEventListener('input', function() {
+    const url = this.value.trim();
+    if (!url) { clearCover(); return; }
+    _photoData = url;
+    const prev = document.getElementById('cover-preview');
+    prev.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-exclamation-triangle\\' style=\\'color:rgba(255,100,100,0.8);font-size:32px\\'></i><span style=\\'color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px\\'>Could not load image</span>'">`;
+    document.getElementById('cover-file-input').value = '';
+  });
+
+  window.clearCover = function() {
+    _photoData = '';
+    document.getElementById('cover-url-input').value = '';
+    document.getElementById('cover-file-input').value = '';
+    document.getElementById('cover-preview').innerHTML = `
+      <i class="fas fa-image" style="font-size:36px;color:rgba(255,255,255,0.4);margin-bottom:8px"></i>
+      <span style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center;padding:0 12px">Click to upload cover<br>(PNG, JPG)</span>`;
+  };
+
+  $('#add-book-form').submit(function(e) {
+    e.preventDefault();
+    const btn = $(this).find('[type=submit]');
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Adding…').prop('disabled', true);
+
+    const data = {};
+    $(this).serializeArray().forEach(f => { data[f.name] = f.value; });
+    if (_photoData) data.photo = _photoData;
+
+    createBook(JSON.stringify(data))
+      .then(() => {
+        toast('Book added to the library!', 'success');
+        navigate('books');
+      })
+      .catch(() => {
+        toast('Failed to add book.', 'error');
+        btn.html('<i class="fas fa-plus"></i> Add Book').prop('disabled', false);
+      });
+  });
+})();
 </script>

@@ -6,90 +6,174 @@
   </div>
 </div>
 
-<div id="users-wrap">
-  <div class="spinner"></div>
+<!-- Search + filter -->
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <div class="search-wrap" style="flex:1;min-width:180px;margin-bottom:0">
+    <i class="fas fa-search"></i>
+    <input type="text" id="user-search" placeholder="Search by username, name or email…" oninput="filterUsers()">
+  </div>
+  <select id="role-filter" class="form-control" style="width:auto;min-width:140px" onchange="filterUsers()">
+    <option value="">All Roles</option>
+    <option value="administrator">Administrator</option>
+    <option value="librarian">Librarian</option>
+    <option value="student">Student</option>
+  </select>
 </div>
+
+<div id="users-wrap"><div class="spinner"></div></div>
 </div>
+
+<style>
+.user-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: box-shadow .2s;
+}
+.user-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.user-avatar-sm {
+  width: 42px; min-width: 42px; height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f2238, #1e40af);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: white;
+  overflow: hidden; flex-shrink: 0;
+}
+.user-avatar-sm img { width:100%;height:100%;object-fit:cover; }
+.user-info-col { flex: 1; min-width: 0; }
+.user-name { font-size: 14px; font-weight: 700; }
+.user-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.user-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+</style>
 
 <script>
-  (function() {
-    if (getCookie('user_role') !== 'administrator') {
-      document.getElementById('users-shell').innerHTML = `
-        <div class="access-denied">
-          <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
-          <h3>Access Denied</h3>
-          <p>This area is for administrators only.</p>
-        </div>`;
+(function() {
+  if (getCookie('user_role') !== 'administrator') {
+    document.getElementById('users-shell').innerHTML = `
+      <div class="access-denied">
+        <i class="fas fa-lock" style="font-size:36px;color:var(--danger);display:block;margin-bottom:12px"></i>
+        <h3>Access Denied</h3><p>This area is for administrators only.</p>
+      </div>`;
+    return;
+  }
+
+  let _users = [];
+
+  function roleBadge(r) {
+    const map = { administrator:'badge-red', librarian:'badge-blue', student:'badge-green' };
+    return `<span class="badge ${map[r]||'badge-gray'}">${r||'—'}</span>`;
+  }
+
+  function getInitial(u) {
+    if (u.firstname) return u.firstname.charAt(0).toUpperCase();
+    return (u.username||'?').charAt(0).toUpperCase();
+  }
+
+  window.filterUsers = function() {
+    const q = (document.getElementById('user-search').value||'').toLowerCase();
+    const roleF = document.getElementById('role-filter').value;
+    const filtered = _users.filter(u => {
+      const name = [u.firstname, u.lastname].filter(Boolean).join(' ').toLowerCase();
+      const match = !q || (u.username||'').toLowerCase().includes(q) || name.includes(q) || (u.email||'').toLowerCase().includes(q);
+      const roleMatch = !roleF || u.role === roleF;
+      return match && roleMatch;
+    });
+    renderUsers(filtered);
+  };
+
+  function renderUsers(list) {
+    const wrap = document.getElementById('users-wrap');
+    if (!list || list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-users"></i></div><h3>No users found</h3></div>';
       return;
     }
+    wrap.innerHTML = list.map(u => {
+      const name = [u.firstname, u.lastname].filter(Boolean).join(' ') || '—';
+      const avatarContent = u.photo
+        ? `<img src="${u.photo}">`
+        : getInitial(u);
+      return `
+      <div class="user-card" id="user-row-${u.id}">
+        <div class="user-avatar-sm">${typeof avatarContent === 'string' && !u.photo ? avatarContent : `<img src="${u.photo}" onerror="this.parentElement.textContent='${getInitial(u)}'">`}</div>
+        <div class="user-info-col">
+          <div class="user-name">${u.username||'—'} ${roleBadge(u.role)}</div>
+          <div class="user-sub">${name}${u.email ? ' · ' + u.email : ''}</div>
+        </div>
+        <div class="user-actions">
+          <select class="form-control" style="font-size:12px;padding:5px 8px;width:auto;min-width:110px" onchange="changeRole(${u.id}, this.value, this)" title="Change role">
+            <option value="student" ${u.role==='student'?'selected':''}>Student</option>
+            <option value="librarian" ${u.role==='librarian'?'selected':''}>Librarian</option>
+            <option value="administrator" ${u.role==='administrator'?'selected':''}>Admin</option>
+          </select>
+          <button class="btn btn-danger btn-sm" onclick="handleDelete(${u.id}, this)" title="Delete user">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-    function roleBadge(r) {
-      const map = { administrator: 'badge-red', librarian: 'badge-blue', student: 'badge-green' };
-      return '<span class="badge ' + (map[r] || 'badge-gray') + '">' + (r || '—') + '</span>';
-    }
-
-    function handleDelete(id, btn) {
-      if (!confirm('Delete this user? This cannot be undone.')) return;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      btn.disabled = true;
-      deleteUser(id).then(() => {
-        toast('User deleted', 'success');
-        $(btn).closest('tr').fadeOut(300, function() { $(this).remove(); });
-        const count = document.querySelectorAll('#users-wrap tbody tr').length - 1;
-        document.getElementById('users-count').textContent = count + ' user' + (count !== 1 ? 's' : '') + ' registered';
-      }).catch(() => {
-        toast('Could not delete user', 'error');
-        btn.innerHTML = '<i class="fas fa-trash"></i>';
-        btn.disabled = false;
-      });
-    }
-    window.handleDelete = handleDelete;
-
-    listUsers()
-      .then(users => {
-        const count = (users || []).length;
-        document.getElementById('users-count').textContent = count + ' user' + (count !== 1 ? 's' : '') + ' registered';
-        const wrap = document.getElementById('users-wrap');
-
-        if (!users || users.length === 0) {
-          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-users"></i></div><h3>No users found</h3></div>';
-          return;
+  window.changeRole = function(id, newRole, sel) {
+    const origVal = sel.getAttribute('data-orig') || sel.value;
+    sel.setAttribute('data-orig', sel.value);
+    updateUser(id, { role: newRole }).then(res => {
+      if (res && res.success) {
+        toast('Role updated!', 'success');
+        // refresh local data
+        const u = _users.find(x => x.id === id);
+        if (u) u.role = newRole;
+        // update badge in DOM
+        const row = document.getElementById('user-row-' + id);
+        if (row) {
+          const nameEl = row.querySelector('.user-name');
+          if (nameEl) {
+            const un = (nameEl.textContent||'').split(' ')[0];
+            nameEl.innerHTML = `${un} <span class="badge ${newRole==='administrator'?'badge-red':newRole==='librarian'?'badge-blue':'badge-green'}">${newRole}</span>`;
+          }
         }
+      } else {
+        toast('Could not update role', 'error');
+        sel.value = origVal;
+      }
+    }).catch(() => { toast('Server error', 'error'); sel.value = origVal; });
+  };
 
-        wrap.innerHTML = `
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${users.map(u => `
-                  <tr>
-                    <td class="text-sm text-muted">#${u.id}</td>
-                    <td><strong>${u.username || '—'}</strong></td>
-                    <td class="text-muted">${[u.firstname, u.lastname].filter(Boolean).join(' ') || '—'}</td>
-                    <td class="text-muted text-sm">${u.email || '—'}</td>
-                    <td>${roleBadge(u.role)}</td>
-                    <td>
-                      <button class="btn btn-danger btn-sm" onclick="handleDelete(${u.id}, this)">
-                        <i class="fas fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>`;
-      })
-      .catch(() => {
-        document.getElementById('users-wrap').innerHTML =
-          '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load users</h3></div>';
-      });
-  })();
+  window.handleDelete = function(id, btn) {
+    confirmDialog({
+      title: 'Delete User',
+      message: 'Delete this user? This cannot be undone.',
+      type: 'danger',
+      okText: 'Delete',
+      onOk: function() {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        deleteUser(id).then(() => {
+          toast('User deleted', 'success');
+          _users = _users.filter(u => u.id !== id);
+          document.getElementById('users-count').textContent = _users.length + ' user' + (_users.length !== 1 ? 's' : '') + ' registered';
+          const row = document.getElementById('user-row-' + id);
+          if (row) $(row).fadeOut(300, function(){ $(this).remove(); });
+        }).catch(() => {
+          toast('Could not delete user', 'error');
+          btn.innerHTML = '<i class="fas fa-trash"></i>';
+          btn.disabled = false;
+        });
+      }
+    });
+  };
+
+  listUsers().then(users => {
+    _users = users || [];
+    document.getElementById('users-count').textContent = _users.length + ' user' + (_users.length !== 1 ? 's' : '') + ' registered';
+    filterUsers();
+  }).catch(() => {
+    document.getElementById('users-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Could not load users</h3></div>';
+  });
+})();
 </script>

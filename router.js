@@ -22,6 +22,25 @@ router.post('/login', (req, res) => {
         .catch(err => res.json({ success: false, error: err.message }));
 });
 
+router.post('/auth/recover', (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.json({ error: 'Email required' });
+    User.findOne({ where: { email } })
+        .then(user => {
+            if (!user) return res.json({ found: false });
+            res.json({ found: true, username: user.username });
+        })
+        .catch(err => res.json({ error: err.message }));
+});
+
+router.post('/auth/reset-password', (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.json({ success: false });
+    User.update({ password }, { where: { email } })
+        .then(([n]) => res.json({ success: n > 0 }))
+        .catch(err => res.json({ success: false, error: err.message }));
+});
+
 router.post('/login/guest', (req, res) => {
     res.cookie('user_role', 'guest');
     res.json({ success: true });
@@ -54,6 +73,16 @@ router.delete('/user/delete', (req, res) => {
         .catch(err => res.json({ success: false, error: err.message }));
 });
 
+router.put('/user/:id/update', (req, res) => {
+    const { id } = req.params;
+    const allowed = ['role', 'firstname', 'lastname', 'email'];
+    const updates = {};
+    allowed.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+    User.update(updates, { where: { id } })
+        .then(() => res.json({ success: true }))
+        .catch(err => res.json({ success: false, error: err.message }));
+});
+
 router.get('/profile/info', (req, res) => {
     const user_id = req.query.user_id || req.cookies.user_id;
     User.findOne({ where: { id: user_id }, attributes: { exclude: ['password'] } })
@@ -63,9 +92,9 @@ router.get('/profile/info', (req, res) => {
 
 router.put('/profile/settings/:user_id', (req, res) => {
     const { user_id } = req.params;
-    const allowed = ['firstname','lastname','email','password','age','gender','address','phone','university','student_type'];
+    const allowed = ['firstname','lastname','email','password','age','gender','address','phone','university','student_type','photo'];
     const updates = {};
-    allowed.forEach(f => { if (req.body[f] !== undefined && req.body[f] !== '') updates[f] = req.body[f]; });
+    allowed.forEach(f => { if (req.body[f] !== undefined && (f === 'photo' || req.body[f] !== '')) updates[f] = req.body[f]; });
     User.update(updates, { where: { id: user_id } })
         .then(() => res.json({ success: true }))
         .catch(err => res.json({ success: false, error: err.message }));
@@ -138,7 +167,7 @@ router.get('/library/books/borrowed', (req, res) => {
     if (!user_id) return res.json([]);
     BookBorrowing.findAll({
         where: { user_id },
-        include: [{ model: Book, as: 'book', attributes: ['title','authors','isbn'] }],
+        include: [{ model: Book, as: 'book', attributes: ['title','authors','isbn','photo'] }],
         order: [['createdAt', 'DESC']]
     })
     .then(borrowings => {
@@ -152,6 +181,7 @@ router.get('/library/books/borrowed', (req, res) => {
             title: b.book ? b.book.title : '—',
             authors: b.book ? b.book.authors : '—',
             isbn: b.book ? b.book.isbn : '—',
+            photo: b.book ? b.book.photo : null,
             book_id: b.book_id
         }));
         res.json(result);

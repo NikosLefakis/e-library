@@ -110,6 +110,13 @@ function deleteUser(userId) {
   });
 }
 
+async function updateUser(userId, data) {
+  const res = await fetch(API_URL + '/user/' + userId + '/update', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
 async function getProfileInfo() {
   const id = getCookie('user_id');
   if (!id) return null;

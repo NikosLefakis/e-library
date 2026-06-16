@@ -13,7 +13,8 @@ const User = db.define('user', {
     address:      { type: Sequelize.STRING, allowNull: true },
     phone:        { type: Sequelize.STRING, allowNull: true },
     university:   { type: Sequelize.STRING, allowNull: true },
-    student_type: { type: Sequelize.ENUM("undergraduate","postgraduate","phd"), allowNull: true }
+    student_type: { type: Sequelize.ENUM("undergraduate","postgraduate","phd"), allowNull: true },
+    photo:        { type: Sequelize.TEXT, allowNull: true }
 });
 
 module.exports = User;

@@ -1,3 +1,17 @@
+<style>
+.auth-card { max-width: 420px; width: 100%; }
+.auth-logo { text-align: center; margin-bottom: 20px; }
+.auth-logo .logo-icon-lg {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, #0f2238, #1e40af);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: white; margin: 0 auto 10px;
+  box-shadow: 0 8px 20px rgba(15,34,56,0.25);
+}
+.auth-logo h1 { font-size: 22px; font-weight: 800; margin: 0; color: var(--text); }
+.auth-logo p { font-size: 13px; color: var(--text-muted); margin: 3px 0 0; }
+</style>
+
 <div class="auth-card">
   <div class="auth-logo">
     <div class="logo-icon-lg"><i class="fas fa-book-open"></i></div>
@@ -6,83 +20,86 @@
   </div>
 
   <!-- Tabs -->
-  <div style="display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:4px;margin-bottom:24px;gap:4px">
+  <div style="display:flex;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:20px;gap:4px">
     <button type="button" id="tab-user" onclick="switchTab('user')"
-      style="flex:1;padding:9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:white;color:var(--text);box-shadow:var(--shadow-sm);font-family:inherit;transition:all .2s">
-      <i class="fas fa-user" style="margin-right:6px"></i>User Login
+      style="flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:white;color:var(--text);box-shadow:var(--shadow-sm);font-family:inherit;transition:all .2s">
+      <i class="fas fa-user" style="margin-right:5px"></i>User Login
     </button>
     <button type="button" id="tab-admin" onclick="switchTab('admin')"
-      style="flex:1;padding:9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:inherit;transition:all .2s">
-      <i class="fas fa-shield-halved" style="margin-right:6px"></i>Admin Portal
+      style="flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:inherit;transition:all .2s">
+      <i class="fas fa-shield-halved" style="margin-right:5px"></i>Admin Portal
     </button>
   </div>
 
   <!-- User login -->
   <div id="panel-user">
     <form id="login-form-user">
-      <div class="form-group">
-        <label class="form-label">Username</label>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label" style="font-size:12px">Username</label>
         <div class="input-icon-wrap">
           <i class="fas fa-user icon"></i>
           <input type="text" name="username" class="form-control" placeholder="Enter your username" required autocomplete="username">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label" style="font-size:12px">Password</label>
         <div class="input-icon-wrap">
           <i class="fas fa-lock icon"></i>
           <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
         </div>
       </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:4px">
+      <button type="submit" class="btn btn-primary btn-block" style="padding:12px;font-size:14px;font-weight:700">
         <i class="fas fa-sign-in-alt"></i> Sign In
       </button>
     </form>
 
-    <div style="display:flex;align-items:center;gap:12px;margin:18px 0">
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0">
       <hr style="flex:1;border:none;border-top:1px solid var(--border)">
-      <span style="font-size:12px;color:var(--text-muted)">OR</span>
+      <span style="font-size:11px;color:var(--text-muted)">OR</span>
       <hr style="flex:1;border:none;border-top:1px solid var(--border)">
     </div>
 
-    <button type="button" class="btn btn-outline btn-block" onclick="guestLogin()" style="margin-bottom:18px">
+    <button type="button" class="btn btn-outline btn-block" onclick="guestLogin()" style="padding:10px;font-size:13px;margin-bottom:14px">
       <i class="fas fa-user-clock"></i> Continue as Guest
     </button>
 
-    <p style="text-align:center;font-size:13px;color:var(--text-muted)">
-      Don't have an account?
-      <button type="button" onclick="registerPageLoad()"
-        style="background:none;border:none;color:var(--primary-light);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">
-        Sign Up
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <p style="font-size:12px;color:var(--text-muted);margin:0">
+        Don't have an account?
+        <button type="button" onclick="registerPageLoad()"
+          style="background:none;border:none;color:var(--primary-light);font-weight:600;cursor:pointer;font-size:12px;font-family:inherit;padding:0">
+          Sign Up
+        </button>
+      </p>
+      <button type="button" onclick="$('#load').load('pages/authentication/forgot.html')"
+        style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;font-family:inherit;text-decoration:underline;padding:0">
+        Forgot password?
       </button>
-    </p>
+    </div>
   </div>
 
   <!-- Admin login -->
   <div id="panel-admin" style="display:none">
-    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:10px">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#1e40af;display:flex;align-items:flex-start;gap:8px">
       <i class="fas fa-shield-halved" style="margin-top:2px;flex-shrink:0"></i>
-      <div>
-        <strong>Admin / Librarian Portal</strong><br>
-        Sign in with your administrator or librarian credentials to manage books and users.
-      </div>
+      <span><strong>Admin / Librarian Portal</strong> — Sign in with administrator or librarian credentials.</span>
     </div>
     <form id="login-form-admin">
-      <div class="form-group">
-        <label class="form-label">Admin Username</label>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label" style="font-size:12px">Username</label>
         <div class="input-icon-wrap">
           <i class="fas fa-user-shield icon"></i>
           <input type="text" name="username" class="form-control" placeholder="Admin username" required autocomplete="username">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label" style="font-size:12px">Password</label>
         <div class="input-icon-wrap">
           <i class="fas fa-lock icon"></i>
           <input type="password" name="password" class="form-control" placeholder="Admin password" required>
         </div>
       </div>
-      <button type="submit" class="btn btn-block btn-lg" style="background:var(--primary-dark);color:white;margin-top:4px">
+      <button type="submit" class="btn btn-block" style="background:#0f2238;color:white;padding:12px;font-size:14px;font-weight:700;border-radius:10px;border:none;cursor:pointer;font-family:inherit">
         <i class="fas fa-shield-halved"></i> Enter Admin Portal
       </button>
     </form>

@@ -19,12 +19,20 @@
   <div id="app-shell">
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+        <!-- New logo: library columns / Greek temple motif -->
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;border-radius:10px">
+          <rect width="38" height="38" rx="10" fill="#060f1e"/>
+          <rect x="8" y="9" width="22" height="3" rx="1.5" fill="#f59e0b"/>
+          <rect x="9"     y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+          <rect x="16.75" y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+          <rect x="24.5"  y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+          <rect x="7" y="27.5" width="24" height="2.5" rx="1.25" fill="white" opacity="0.4"/>
+        </svg>
         <div><strong>E-Library</strong><span>Digital Library</span></div>
       </div>
       <div class="sidebar-user">
         <div class="user-avatar" id="sb-avatar">?</div>
-        <div class="user-info"><strong id="sb-username">…</strong><span id="sb-role">-</span></div>
+        <div class="user-info"><strong id="sb-username">&#8230;</strong><span id="sb-role">-</span></div>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-label">Library</div>
@@ -34,7 +42,7 @@
         <div class="nav-label" id="mgmt-label" style="display:none">Management</div>
         <button class="nav-item" id="nav-addbook" onclick="navigate('addbook')" style="display:none"><i class="fas fa-plus-circle"></i> Add Book</button>
         <button class="nav-item" id="nav-libbooks" onclick="navigate('libbooks')" style="display:none"><i class="fas fa-building-columns"></i> My Library Books</button>
-        <button class="nav-item" id="nav-manageborrow" onclick="navigate('manageborrow')" style="display:none"><i class="fas fa-clipboard-list"></i> Manage Borrowings</button>
+        <button class="nav-item" id="nav-manageborrow" onclick="navigate('manageborrow')" style="display:none"><i class="fas fa-clipboard-list"></i> Manage Borrowings <span id="badge-pending" style="display:none;margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:800;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center"></span></button>
 
         <div class="nav-label" id="admin-label" style="display:none">Admin</div>
         <button class="nav-item" id="nav-users" onclick="navigate('users')" style="display:none"><i class="fas fa-users"></i> Manage Users</button>
@@ -50,30 +58,114 @@
     </aside>
 
     <div class="main-content">
-      <div id="app-load" class="page-body"></div>
-      <footer class="app-footer">
-        <div class="footer-links">
-          <a href="https://www.uoc.gr" target="_blank" rel="noopener">University of Crete</a>
-          <a href="https://www.tuc.gr" target="_blank" rel="noopener">Technical University of Crete</a>
-          <a href="https://www.helmepa.gr" target="_blank" rel="noopener">HELMEPA</a>
-          <a href="https://www.abebooks.com" target="_blank" rel="noopener">AbeBooks</a>
+      <!-- Top navigation bar -->
+      <header class="main-topbar" id="main-topbar">
+        <div class="topbar-breadcrumb">
+          <span class="topbar-page-icon" id="topbar-icon"><i class="fas fa-book"></i></span>
+          <h1 class="topbar-title" id="topbar-title">Browse Books</h1>
         </div>
-        <div class="footer-copy">© 2023 E-Library — HY-359 University of Crete</div>
-      </footer>
+        <div class="topbar-meta">
+          <span class="topbar-time" id="topbar-time"></span>
+          <div class="topbar-sep"></div>
+          <div class="topbar-user-pill" onclick="navigate('profile')" title="My Profile">
+            <div class="topbar-avatar" id="topbar-avatar">?</div>
+            <span class="topbar-user-name" id="topbar-user-name">&#8212;</span>
+            <i class="fas fa-chevron-down" style="font-size:9px;color:var(--text-light)"></i>
+          </div>
+        </div>
+      </header>
+      <div id="app-load" class="page-body"></div>
     </div>
   </div>
 
+  <footer class="app-footer" id="app-footer" style="display:none">
+    <div class="footer-inner">
+      <!-- Brand column -->
+      <div class="footer-brand-col">
+        <div class="footer-logo-wrap">
+          <svg width="36" height="36" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:9px;flex-shrink:0">
+            <rect width="38" height="38" rx="10" fill="#060f1e"/>
+            <rect x="8" y="9" width="22" height="3" rx="1.5" fill="#f59e0b"/>
+            <rect x="9"     y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+            <rect x="16.75" y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+            <rect x="24.5"  y="14" width="4.5" height="13" rx="2" fill="white" opacity="0.95"/>
+            <rect x="7" y="27.5" width="24" height="2.5" rx="1.25" fill="white" opacity="0.4"/>
+          </svg>
+          <div>
+            <div class="footer-brand-name">E-Library</div>
+            <div class="footer-brand-sub">HY-359 &middot; University of Crete</div>
+          </div>
+        </div>
+        <p class="footer-desc">A digital borrowing platform for libraries across Crete, serving students and researchers at partner universities.</p>
+      </div>
+
+      <!-- Platform navigation -->
+      <div class="footer-col">
+        <div class="footer-col-title">Platform</div>
+        <a href="#" onclick="navigate('books');return false"><i class="fas fa-book"></i> Browse Books</a>
+        <a href="#" onclick="navigate('borrowed');return false"><i class="fas fa-bookmark"></i> My Borrowings</a>
+        <a href="#" onclick="navigate('profile');return false"><i class="fas fa-user-circle"></i> My Profile</a>
+        <a href="#" onclick="navigate('libraries');return false"><i class="fas fa-building-columns"></i> Libraries</a>
+      </div>
+
+      <!-- Partner libraries -->
+      <div class="footer-col">
+        <div class="footer-col-title">Libraries</div>
+        <a href="https://www.lib.uoc.gr" target="_blank" rel="noopener"><i class="fas fa-map-pin"></i> UoC &mdash; Heraklion</a>
+        <a href="https://www.lib.tuc.gr" target="_blank" rel="noopener"><i class="fas fa-map-pin"></i> TUC &mdash; Chania</a>
+        <a href="https://library.hmu.gr" target="_blank" rel="noopener"><i class="fas fa-map-pin"></i> HMU &mdash; Rethymno</a>
+        <a href="https://www.uoc.gr" target="_blank" rel="noopener"><i class="fas fa-map-pin"></i> UoC &mdash; Rethymno</a>
+      </div>
+
+      <!-- Academic resources -->
+      <div class="footer-col">
+        <div class="footer-col-title">Academic</div>
+        <a href="https://openlibrary.org" target="_blank" rel="noopener"><i class="fas fa-globe"></i> Open Library</a>
+        <a href="https://scholar.google.com" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i> Google Scholar</a>
+        <a href="https://www.uoc.gr" target="_blank" rel="noopener"><i class="fas fa-university"></i> University of Crete</a>
+        <a href="https://www.tuc.gr" target="_blank" rel="noopener"><i class="fas fa-university"></i> Tech. Univ. of Crete</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; <span id="footer-year"></span> E-Library &middot; Digital Library System</span>
+      <span class="footer-sep">&middot;</span>
+      <span>HY-359 &middot; Dept. of Computer Science, University of Crete</span>
+      <span class="footer-sep">&middot;</span>
+      <span>Built with <strong style="color:rgba(255,255,255,0.5)">Node.js</strong> &amp; <strong style="color:rgba(255,255,255,0.5)">SQLite</strong></span>
+    </div>
+  </footer>
+
   <div class="toast-box" id="toast-box"></div>
 
-  <div id="modal-overlay" onclick="if(event.target===this)closeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:24px;">
-    <div id="modal-box" style="background:white;border-radius:16px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
-      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:white;z-index:1;">
+  <!-- Main modal -->
+  <div id="modal-overlay" onclick="if(event.target===this)closeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;padding:24px;">
+    <div id="modal-box" style="background:white;border-radius:18px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.25);">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:white;z-index:1;border-radius:18px 18px 0 0">
         <h3 id="modal-title" style="font-size:17px;font-weight:700"></h3>
-        <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">×</button>
+        <button onclick="closeModal()" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center;transition:all .2s">&times;</button>
       </div>
       <div id="modal-body" style="padding:24px"></div>
     </div>
   </div>
+
+  <!-- Confirm modal -->
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:600;align-items:center;justify-content:center;padding:24px;">
+    <div style="background:white;border-radius:18px;max-width:400px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.25);overflow:hidden;animation:confirmPop .2s cubic-bezier(0.34,1.56,0.64,1)">
+      <div style="padding:28px 28px 20px;text-align:center">
+        <div id="confirm-icon" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px"></div>
+        <h3 id="confirm-title" style="font-size:18px;font-weight:800;margin-bottom:8px;color:var(--text)"></h3>
+        <p id="confirm-msg" style="font-size:14px;color:var(--text-muted);line-height:1.6"></p>
+      </div>
+      <div style="padding:16px 24px 24px;display:flex;gap:10px;justify-content:center">
+        <button id="confirm-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:white;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-muted);transition:all .2s">Cancel</button>
+        <button id="confirm-ok" style="flex:1;padding:11px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:white;transition:all .2s"></button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes confirmPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  </style>
 
   <script src="assets/js/helpers.js"></script>
   <script src="script.js"></script>

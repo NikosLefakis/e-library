@@ -6,9 +6,34 @@
   <button class="btn btn-accent" onclick="openAddLibrary()"><i class="fas fa-plus"></i> Add Library</button>
 </div>
 
-<div id="lib-wrap">
-  <div class="spinner"></div>
-</div>
+<div id="lib-wrap"><div class="spinner"></div></div>
+
+<style>
+.lib-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: box-shadow .2s, transform .2s;
+}
+.lib-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.lib-icon {
+  width: 48px; min-width: 48px; height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f2238, #1e3a8a);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: white;
+}
+.lib-info { flex: 1; min-width: 0; }
+.lib-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.lib-address { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.lib-coords { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+.lib-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+</style>
 
 <script>
 (function() {
@@ -23,38 +48,24 @@
     listLibraries().then(libs => {
       const wrap = document.getElementById('lib-wrap');
       if (!libs || libs.length === 0) {
-        wrap.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon"><i class="fas fa-building-columns"></i></div>
-            <h3>No libraries yet</h3>
-            <p>Add a library to get started.</p>
-          </div>`;
+        wrap.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-building-columns"></i></div><h3>No libraries yet</h3><p>Add a library to get started.</p></div>`;
         return;
       }
-      wrap.innerHTML = `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Address</th><th>Coordinates</th><th>Actions</th></tr></thead>
-            <tbody>
-              ${libs.map(lib => `
-                <tr>
-                  <td><strong>${lib.name}</strong></td>
-                  <td style="color:var(--text-muted)">${lib.address || '—'}</td>
-                  <td style="font-size:12px;color:var(--text-muted)">
-                    ${lib.lat && lib.lon ? `${lib.lat}, ${lib.lon}` : '—'}
-                    ${lib.lat && lib.lon ? `<a href="https://www.openstreetmap.org/?mlat=${lib.lat}&mlon=${lib.lon}&zoom=16" target="_blank" style="margin-left:6px;color:var(--accent)"><i class="fas fa-map"></i></a>` : ''}
-                  </td>
-                  <td>
-                    <div style="display:flex;gap:8px">
-                      <button class="btn btn-ghost btn-sm" onclick="openViewBooks(${lib.id}, '${lib.name.replace(/'/g,"\\'")}')">
-                        <i class="fas fa-book"></i> Books
-                      </button>
-                    </div>
-                  </td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
+      wrap.innerHTML = libs.map(lib => `
+        <div class="lib-card">
+          <div class="lib-icon"><i class="fas fa-building-columns"></i></div>
+          <div class="lib-info">
+            <div class="lib-name">${lib.name}</div>
+            <div class="lib-address"><i class="fas fa-map-pin" style="margin-right:4px;opacity:.6"></i>${lib.address || '—'}</div>
+            ${lib.lat && lib.lon ? `<div class="lib-coords"><i class="fas fa-crosshairs" style="margin-right:4px;opacity:.5"></i>${lib.lat}, ${lib.lon}</div>` : ''}
+          </div>
+          <div class="lib-actions">
+            ${lib.lat && lib.lon ? `<a href="https://www.openstreetmap.org/?mlat=${lib.lat}&mlon=${lib.lon}&zoom=16" target="_blank" class="btn btn-ghost btn-sm" title="View on map"><i class="fas fa-map"></i></a>` : ''}
+            <button class="btn btn-outline btn-sm" onclick="openViewBooks(${lib.id}, '${lib.name.replace(/'/g,"\\'")}')">
+              <i class="fas fa-book"></i> Books
+            </button>
+          </div>
+        </div>`).join('');
     });
   }
 
@@ -88,7 +99,6 @@
           <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
         </div>
       </form>`);
-
     $('#lib-form').submit(function(e) {
       e.preventDefault();
       const btn = $(this).find('[type=submit]');
@@ -105,7 +115,7 @@
   };
 
   window.openViewBooks = function(libId, libName) {
-    openModal('Books in ' + libName, '<div class="spinner"></div>');
+    openModal('📚 Books in ' + libName, '<div class="spinner"></div>');
     getLibraryBooks(libId).then(rows => {
       if (!rows || rows.length === 0) {
         $('#modal-body').html('<div class="empty-state" style="padding:20px 0"><p>No books assigned to this library yet.</p></div>');
@@ -114,12 +124,15 @@
       const tableRows = rows.map(r => {
         const b = r.book || {};
         return `<tr>
-          <td><strong>${b.title || '—'}</strong></td>
-          <td style="font-size:13px;color:var(--text-muted)">${b.authors || '—'}</td>
+          <td>
+            ${b.photo ? `<img src="${b.photo}" style="width:32px;height:44px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px" onerror="this.remove()">` : ''}
+            <strong>${b.title||'—'}</strong>
+          </td>
+          <td style="font-size:13px;color:var(--text-muted)">${b.authors||'—'}</td>
           <td>${r.available ? '<span class="badge badge-green">Available</span>' : '<span class="badge badge-red">Unavailable</span>'}</td>
           <td>
             <button class="btn btn-outline btn-sm" onclick="toggleAvail(${libId}, ${b.id}, ${r.available}, this)">
-              <i class="fas fa-toggle-${r.available ? 'on' : 'off'}"></i> ${r.available ? 'Mark Unavailable' : 'Mark Available'}
+              <i class="fas fa-toggle-${r.available?'on':'off'}"></i> ${r.available?'Mark Unavailable':'Mark Available'}
             </button>
           </td>
         </tr>`;
@@ -132,10 +145,8 @@
           </table>
         </div>`);
     });
-
     window.toggleAvail = function(libId, bookId, current, btn) {
-      const newVal = !current;
-      setBookAvailability(libId, bookId, newVal).then(res => {
+      setBookAvailability(libId, bookId, !current).then(res => {
         if (res && res.success) { toast('Updated!', 'success'); openViewBooks(libId, libName); }
         else toast('Could not update', 'error');
       });

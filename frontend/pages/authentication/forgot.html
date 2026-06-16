@@ -1,0 +1,121 @@
+<div class="auth-card" style="max-width:420px">
+  <div class="auth-logo">
+    <div class="logo-icon-lg" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+      <i class="fas fa-key"></i>
+    </div>
+    <h1>Account Recovery</h1>
+    <p>Enter your email to recover your account</p>
+  </div>
+
+  <!-- Step 1: email -->
+  <div id="step-email">
+    <form id="recover-form">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-envelope icon"></i>
+          <input type="email" name="email" class="form-control" placeholder="your@email.com" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">
+        <i class="fas fa-search"></i> Find My Account
+      </button>
+    </form>
+  </div>
+
+  <!-- Step 2: found account, set new password -->
+  <div id="step-reset" style="display:none">
+    <div style="background:var(--success-light);border:1px solid #6ee7b7;border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px">
+      <p style="font-size:13px;color:#065f46;margin-bottom:4px"><i class="fas fa-check-circle" style="margin-right:6px"></i>Account found!</p>
+      <p style="font-size:14px;color:#065f46">Your username is: <strong id="found-username"></strong></p>
+    </div>
+    <form id="reset-form">
+      <input type="hidden" id="reset-email" name="email">
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-lock icon"></i>
+          <input type="password" name="password" id="new-password" class="form-control" placeholder="Choose a new password" required minlength="4">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-lock icon"></i>
+          <input type="password" name="password2" id="confirm-password" class="form-control" placeholder="Repeat new password" required minlength="4">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">
+        <i class="fas fa-save"></i> Reset Password
+      </button>
+    </form>
+  </div>
+
+  <p style="text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted)">
+    <button type="button" onclick="$('#load').load('pages/authentication/login.html')"
+      style="background:none;border:none;color:var(--primary-light);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">
+      <i class="fas fa-arrow-left"></i> Back to Login
+    </button>
+  </p>
+</div>
+
+<script>
+  $('#recover-form').submit(function(e) {
+    e.preventDefault();
+    const btn = $(this).find('[type=submit]');
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Searching…').prop('disabled', true);
+    const email = $(this).find('[name=email]').val().trim();
+
+    fetch('/auth/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.username) {
+        $('#found-username').text(res.username);
+        $('#reset-email').val(email);
+        $('#step-email').hide();
+        $('#step-reset').show();
+      } else {
+        toast('No account found with that email.', 'error');
+        btn.html('<i class="fas fa-search"></i> Find My Account').prop('disabled', false);
+      }
+    })
+    .catch(() => {
+      toast('Server error.', 'error');
+      btn.html('<i class="fas fa-search"></i> Find My Account').prop('disabled', false);
+    });
+  });
+
+  $('#reset-form').submit(function(e) {
+    e.preventDefault();
+    const pass  = $('#new-password').val();
+    const pass2 = $('#confirm-password').val();
+    if (pass !== pass2) { toast('Passwords do not match!', 'warning'); return; }
+
+    const btn = $(this).find('[type=submit]');
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Saving…').prop('disabled', true);
+
+    fetch('/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: $('#reset-email').val(), password: pass })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.success) {
+        toast('Password reset! You can now log in.', 'success');
+        setTimeout(() => $('#load').load('pages/authentication/login.html'), 1500);
+      } else {
+        toast('Could not reset password.', 'error');
+        btn.html('<i class="fas fa-save"></i> Reset Password').prop('disabled', false);
+      }
+    })
+    .catch(() => {
+      toast('Server error.', 'error');
+      btn.html('<i class="fas fa-save"></i> Reset Password').prop('disabled', false);
+    });
+  });
+</script>
